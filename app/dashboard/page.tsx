@@ -1502,6 +1502,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
+              
                     <input id="imageUpload" type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file); }} className="hidden" />
                   </div>
                   <div className="mb-4">
