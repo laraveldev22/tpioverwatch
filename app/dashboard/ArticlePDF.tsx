@@ -1,4 +1,4 @@
-// ArticlePDF.tsx
+ 
 import React from "react";
 import {
   Document,
@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "left",
     marginBottom: 12,
+    lineHeight: 1.2,
   },
   byline: {
     fontSize: 11,
@@ -55,11 +56,14 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 15,
     color: "#555",
+    lineHeight: 1.2,
+
   },
   lead: {
     fontSize: 13,
     fontWeight: "bold",
     marginBottom: 18,
+    lineHeight: 1.3,
     textAlign: "left",
   },
   contentArea: {
@@ -70,9 +74,12 @@ const styles = StyleSheet.create({
     flex: 2,
     textAlign: "justify",
     marginBottom: 20,
-    lineHeight: 1.5,
+    lineHeight: 1.6,
     fontSize: 12,
-  },
+    wordBreak: "normal",        // words cut nahi honge
+    overflowWrap: "break-word", // long words line break karenge
+  }
+  ,
   sidebar: {
     flex: 1,
   },
@@ -130,8 +137,6 @@ const styles = StyleSheet.create({
     textDecoration: "underline",
   },
 });
-
-
 
 const ArticlePDF: React.FC<ArticlePDFProps> = ({
   editedTitle,
