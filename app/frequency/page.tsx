@@ -33,7 +33,7 @@ const Page = () => {
             custom_days:
                 frequency === "Custom" ? Number(customDays) : null, // send number if custom
             num_articles: numArticles,
-            max_size: maxSize,
+            max_size:  Number(numArticles),
         };
 
         setLoading(true);
@@ -124,7 +124,7 @@ const Page = () => {
                             type="text"
                             min={1}
                             value={maxSize}
-                            onChange={(e) => setMaxSize(e.target.value)}
+                            
                             className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         />
                     </div>
