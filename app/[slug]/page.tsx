@@ -198,7 +198,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      alert("Newsletter published successfully!");
+      router.push("/dashboard")
     } catch (error) {
       console.error("Publish failed:", error);
       alert("Failed to publish newsletter.");
@@ -251,7 +251,6 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
-
       <div className="max-w-7xl mx-auto flex justify-start items-center mb-4">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
