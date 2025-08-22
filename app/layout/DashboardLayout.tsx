@@ -1,13 +1,15 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
-import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt } from "react-icons/fa";
+import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog } from "react-icons/fa";
 import { Loader2, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useRouter } from 'nextjs-toploader/app';
+import Cookies from "js-cookie";
+import {  FaRegNewspaper } from "react-icons/fa";
 
-
+ 
 interface DashboardLayoutProps {
   children?: ReactNode;
   getPrompts?: (value: string) => void
@@ -62,7 +64,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
 
   // Menu configuration
   const menuItems = [
-    { name: "Home", icon: <FaHome />, path: "/demo" },
+    { name: "Home", icon: <FaHome />, path: "/dashboard" },
     { name: "Article List", icon: <FaFileAlt />, path: "/articles" },
     { name: "Archive", icon: <FaArchive />, path: "/archives" },
   ];
@@ -126,6 +128,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    Cookies.remove("token")
     window.location.href = "/";
   };
 
@@ -184,7 +187,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
       >
         {/* Logo */}
         <div className="p-4 flex items-center gap-2 border-b border-gray-700">
-          <Image src="/logo2.png" alt="Logo" width={150} height={32} />
+          <Image src="/mainLogo.png" alt="Logo" width={150} height={32} />
         </div>
 
         {/* Scrollable Content */}
@@ -196,7 +199,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
               return (
                 <button
                   key={item.path}
-                  onClick={()=> route.push(item.path)}
+                  onClick={() => route.push(item.path)}
                   className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition
               ${isActive ? "bg-[#e8be5a] text-black" : "bg-[#004682] text-white hover:bg-[#003366]"}
             `}
@@ -295,7 +298,13 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
         </div>
 
         {/* Logout at Bottom */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-4 border-t border-gray-700 flex flex-col gap-4">
+          <button
+            onClick={() => route.push("/frequency")}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            <FaRegNewspaper /> Newsletter Settings
+          </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
@@ -332,7 +341,8 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
           </div>
           <div className="flex items-center space-x-4">
             <span>{userData?.username}</span>
-            <FaUserCircle size={28} />
+            <FaUserCircle size={24} />
+
           </div>
         </header>
 

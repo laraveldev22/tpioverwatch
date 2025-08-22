@@ -2,7 +2,6 @@
 "use client";
 import React from "react";
 import {
-    Document,
     Page,
     Text,
     View,
@@ -20,7 +19,7 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     header: {
-        backgroundColor: "#004682",
+        backgroundColor: "#171a39",
         color: "white",
         padding: 12,
         flexDirection: "row",
@@ -30,7 +29,7 @@ const styles = StyleSheet.create({
         borderRadius: 8, // 0.5rem
     },
     footerMain: {
-        backgroundColor: "#004682",
+        backgroundColor: "#171a39",
         color: "white",
         padding: 12,
         flexDirection: "row",
@@ -190,7 +189,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     button: {
-        backgroundColor: "#004682", // deep blue
+        backgroundColor: "#171a39", // deep blue
         width: "180px",
         color: "white",
         textAlign: "center",
@@ -254,32 +253,32 @@ interface NewsletterPDFProps {
     publishedArticles: Article[];
     failedArticleIds?: string[];
     error?: string;
+    Logo: any,
+    editableTitle: string,
+    editableMessage: string
 }
 
 // ---------------- COMPONENT ----------------
 const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
     currentDateFormatted,
     publishedArticles,
-    failedArticleIds = [],
-    error,
+    Logo,
+    editableTitle,
+    editableMessage
 }) => (
     <Page size="A4" style={styles.page}>
 
         {/* Header */}
         <View style={styles.header}>
-            {/* <Image src={"/logo.png"} style={styles.logo} /> */}
-            <Text style={styles.headerTitle}>TPI Newsletter</Text>
+            <Image src={Logo} style={styles.logo} />
+            <Text style={styles.headerTitle}>{editableTitle}</Text>
             <Text style={styles.date}>{currentDateFormatted}</Text>
         </View>
 
         <View style={styles.section}>
             <Text style={styles.heading}>Editor&apos;s Message</Text>
             <Text style={styles.paragraph}>
-                Welcome to our newsletter — a space dedicated to informing, honouring, and
-                connecting Australia’s totally and permanently incapacitated veterans,
-                along with their families and support networks. Each edition is crafted to
-                share trusted updates, celebrate service, and preserve the stories that
-                define our community. Thank you for allowing us to be part of your journey.
+                {editableMessage}
             </Text>
         </View>
         <View style={styles.glanceSection}>
@@ -451,7 +450,7 @@ const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
 
             {/* Right side - Date + Logo */}
             <View style={styles.footerRight}>
-                {/* <Image src={"/logo.png"} style={styles.logo2} /> */}
+                <Image src={Logo} style={styles.logo2} />
             </View>
         </View>
     </Page>

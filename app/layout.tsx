@@ -6,18 +6,12 @@ import NextTopLoader from 'nextjs-toploader';
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'TPI Dashboard',
+  title: 'TPI - Veterans Overwatch ',
   icons: {
-    icon: '/logo-white 1.svg',
+    icon: '/fav.png',
   },
 }
-// export async function generateMetadata({ params }: { params: { slug: string } }) {
-//   return {
-//     title: `TPI Newsletter - ${new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}`,
-//     description: 'TPI Newsletter for veterans and their families.',
-//   };
-// }
-
+ 
 export default function RootLayout({
   children,
 }: Readonly<{

@@ -1,11 +1,13 @@
-
 "use client";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Phone, Shield, Globe } from 'lucide-react';
-import { use } from 'react';
-// import { NewsletterPDF } from './NewsletterPDF';
-
+import axios from 'axios';
+import { FaFilePdf } from 'react-icons/fa';
+import { MdPublishedWithChanges } from "react-icons/md";
+import { ImSpinner2 } from "react-icons/im";
+import { IoMdAdd, IoMdClose } from "react-icons/io";
+import { MdEdit, MdCheck } from "react-icons/md"; // Add at top with other imports
 
 interface FullArticle {
   id: string;
@@ -25,7 +27,7 @@ interface FullArticle {
   conversation_session?: string;
 }
 
-// Helper function to format date as DD-month-YYYY (e.g., 12-august-2025)
+// Helper function to format date as DD-month-YYYY
 const formatDateForSlug = (date: Date): string => {
   const day = date.getDate().toString().padStart(2, '0');
   const month = date.toLocaleString('en-AU', { month: 'long' }).toLowerCase();
@@ -34,40 +36,28 @@ const formatDateForSlug = (date: Date): string => {
 };
 
 export default function NewsletterPublish({ params }: { params: Promise<{ slug: string }> }) {
-  const [error, setError] = useState<string | null>(null);
   const [publishedArticles, setPublishedArticles] = useState<FullArticle[]>([]);
-  const [failedArticleIds, setFailedArticleIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [publishedArticlesPdf, setPublishedArticlesPdf] = useState<any[]>([]);
   const router = useRouter();
   const [articleIds, setArticleIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingMessage, setIsEditingMessage] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableTitle, setEditableTitle] = useState("TPI Newsletter");
+  const [editableMessageTitle, setEditableMessageTitle] = useState("Editor's Message");
+  const [editableMessage, setEditableMessage] = useState(
+    "Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
+  );
+  const [publishing, setPublishing] = useState(false);
 
-  // Unwrap params using React.use()
+
   const { slug } = use(params);
 
-  // Generate the expected slug for validation
   const currentDate = new Date();
   const expectedSlug = formatDateForSlug(currentDate);
-
-  useEffect(() => {
-    // Validate the slug; redirect to correct URL if it doesn't match
-    if (slug !== expectedSlug) {
-      router.replace(`/${expectedSlug}`);
-      return;
-    }
-
-    if (typeof window !== "undefined") {
-      try {
-        const savedPublishedIds = localStorage.getItem("publishedArticleIds");
-        const parsedIds = savedPublishedIds ? JSON.parse(savedPublishedIds) : [];
-        if (Array.isArray(parsedIds)) {
-          setArticleIds(parsedIds);
-        }
-      } catch (err) {
-        console.error("Error parsing publishedArticleIds from localStorage:", err);
-      }
-    }
-  }, [slug, router]);
 
   const formatKeyFacts = (keyFacts: string | string[] | undefined): string[] => {
     if (!keyFacts) return [];
@@ -85,149 +75,21 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
     return [];
   };
 
-  const clearError = () => setTimeout(() => setError(null), 5000);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchArticles = async () => {
-      if (articleIds.length === 0) return;
-      setIsLoading(true);
-      setError(null);
-      setFailedArticleIds([]);
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          setError("Authentication required");
-          clearError();
-          router.push("/");
-          return;
-        }
-        const articlePromises = articleIds.map((id) =>
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/?is_newsletter=true`, {
-            method: "GET",
-            headers: { Authorization: `Token ${token}` },
-          }).then(async (response) => {
-            if (!response.ok) {
-              if (response.status === 401) {
-                setError("Authentication failed. Please log in again.");
-                clearError();
-                localStorage.removeItem("token");
-                router.push("/");
-                throw new Error("Unauthorized");
-              }
-              setFailedArticleIds((prev) => [...prev, id]);
-              return null;
-            }
-            return response.json();
-          })
-        );
-        const articles = await Promise.all(articlePromises);
-        const transformedArticles = articles
-          .filter((article): article is any => !!article)
-          .map((article) => ({
-            id: article.article.id,
-            title: article.article.title,
-            byline: article.article.byline,
-            lead_paragraph: article.article.lead_paragraph,
-            content: article.article.content,
-            image_url: article.article.image_url,
-            key_facts: formatKeyFacts(article.article.key_facts),
-            quote_block: article.article.quote_block,
-            tags: article.article.tags,
-            created_at: article.article.updated_at || article.article.created_at,
-            cta: article.article.cta || "",
-          }));
-        const orderedArticles = articleIds
-          .map((id) => {
-            const found = transformedArticles.find((a) => a.id === id);
-            return found || null;
-          })
-          .filter((article): article is any => !!article);
-
-        if (isMounted) {
-          setPublishedArticlesPdf(transformedArticles);
-        }
-        if (isMounted) {
-          setPublishedArticles(orderedArticles);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(`Failed to load articles: ${err instanceof Error ? err.message : "Unknown error"}`);
-          clearError();
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchArticles();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [articleIds, router]);
-
-  const handleUnpublish = useCallback(async () => {
-    if (publishedArticles.length === 0) {
-      setError("No articles to unpublish");
-      clearError();
-      return;
-    }
-    if (!confirm(`Are you sure you want to unpublish ${publishedArticles.length} article${publishedArticles.length > 1 ? 's' : ''}?`)) return;
-    setIsLoading(true);
-    setError(null);
+  const getBase64FromUrl = async (url: string) => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("Authentication required");
-        clearError();
-        router.push("/");
-        return;
-      }
-      const unpublishPromises = publishedArticles.map((article) =>
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${article.id}/`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
-          body: JSON.stringify({ ...article, is_newsletter: false }),
-        }).then(async (response) => {
-          if (!response.ok) {
-            if (response.status === 401) {
-              setError("Authentication failed. Please log in again.");
-              clearError();
-              localStorage.removeItem("token");
-              router.push("/");
-              throw new Error("Unauthorized");
-            }
-            throw new Error(`Failed to unpublish article ${article.id}`);
-          }
-          return response.json();
-        })
-      );
-      await Promise.all(unpublishPromises);
-      setPublishedArticles([]);
-      setFailedArticleIds([]);
-      localStorage.setItem("publishedArticleIds", JSON.stringify([]));
-      router.push("/dashboard");
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch image");
+      const blob = await response.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
     } catch (err) {
-      setError(`Failed to unpublish articles: ${err instanceof Error ? err.message : "Unknown error"}`);
-      clearError();
-    } finally {
-      setIsLoading(false);
+      console.error("Base64 conversion failed:", err);
+      return ""; // fallback to empty string if image fails
     }
-  }, [publishedArticles, router]);
-
-  const getBase64FromUrl = async (url: any) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
   };
 
   const currentDateFormatted = currentDate.toLocaleDateString("en-AU", {
@@ -237,77 +99,253 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   });
 
   const handleExportPDF = async () => {
-    if (typeof window === "undefined") return; // ensure client-side
-    alert("Exporting newsletter as PDF...");
-    const logoBase64 = await getBase64FromUrl(`${window.location.origin}/logo.png`);
-    const { pdf, Document } = await import("@react-pdf/renderer");
-    // Lazy load the PDF component
-    //  const {  NewsletterPDF } = await import("./NewsletterPDF");
-    const NewsletterPDF = (await import("./NewsletterPDF")).default;
+    if (typeof window === "undefined") return;
 
+    setExporting(true);
+    try {
+      // Convert logo to Base64
+      const logoBase64 = await getBase64FromUrl(`${window.location.origin}/mainLogo.png`);
 
-    // Generate PDF blob
-    const blob = await pdf(
-      <Document>
-        <NewsletterPDF
-          currentDateFormatted={currentDateFormatted}
-          publishedArticles={publishedArticlesPdf}
-          failedArticleIds={failedArticleIds}
-        />
-      </Document>
+      // Lazy import PDF renderer and your component
+      const { pdf, Document } = await import("@react-pdf/renderer");
+      const NewsletterPDF = (await import("./NewsletterPDF")).default;
 
-    ).toBlob();
+      // Generate PDF blob
+      const blob = await pdf(
+        <Document>
+          <NewsletterPDF
+            Logo={logoBase64 || undefined} // fallback if logo fails
+            currentDateFormatted={currentDateFormatted}
+            publishedArticles={publishedArticlesPdf}
+            editableTitle={editableTitle}
+            editableMessage={editableMessage}
+          />
+        </Document>
+      ).toBlob();
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "article.pdf";
-    link.click();
-    URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "newsletter.pdf";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF Export failed:", err);
+    } finally {
+      setExporting(false);
+    }
   };
 
-  if (isLoading) {
+
+  const fetchArticles = async () => {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/articles/?is_newsletter=1`,
+        { headers: { Authorization: `Token ${token}` } }
+      );
+
+      const rawArticles = response?.data?.results.results || response?.data || [];
+
+      const transformedArticles = rawArticles
+        .filter((article: any) => !!article)
+        .map((article: any) => ({
+          id: article.id,
+          title: article.title,
+          byline: article.byline,
+          lead_paragraph: article.lead_paragraph,
+          content: article.content,
+          image_url: article.image_url,
+          key_facts: formatKeyFacts(article.key_facts),
+          quote_block: article.quote_block,
+          tags: article.tags,
+          created_at: article.updated_at || article.created_at,
+          cta: article.cta || "",
+        }));
+      const allArticleIds = transformedArticles.map((article: any) => article.id);
+      setArticleIds(allArticleIds);
+      setPublishedArticlesPdf(transformedArticles);
+      setPublishedArticles(transformedArticles);
+    } catch (error) {
+      console.error("Error fetching articles:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePublishNewsletter = async () => {
+    if (articleIds.length === 0) return; // nothing to publish
+    setPublishing(true);
+    const token = localStorage.getItem("token");
+    try {
+      const payload = {
+        title: editableTitle,
+        newsletter_url: `${process.env.NEXT_PUBLIC_API_URL}/newsletters/${slug}`,
+        ad_hoc: "false",
+        articles: articleIds, // use all stored IDs
+      };
+
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/newsletters/publish/`,
+        payload,
+        { headers: { Authorization: `Token ${token}` } }
+      );
+
+      alert("Newsletter published successfully!");
+    } catch (error) {
+      console.error("Publish failed:", error);
+      alert("Failed to publish newsletter.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (slug !== expectedSlug) {
+      router.replace(`/${expectedSlug}`);
+      return;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const savedPublishedIds = localStorage.getItem("publishedArticleIds");
+        const parsedIds = savedPublishedIds ? JSON.parse(savedPublishedIds) : [];
+        if (Array.isArray(parsedIds)) setArticleIds(parsedIds);
+      } catch (err) {
+        console.error("Error parsing publishedArticleIds:", err);
+      }
+    }
+  }, [slug, router]);
+
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-gray-800 text-lg">Loading articles...</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center space-y-4">
+          <svg className="animate-spin h-16 w-16" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="#171a39" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="#171a39" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          <p className="text-lg font-semibold" style={{ color: "#171a39" }}>Loading articles...</p>
+        </div>
       </div>
     );
   }
 
-  // if (publishedArticles.length === 0 && failedArticleIds.length === 0) {
-  //   return (
-  //     <div className="min-h-screen bg-white flex items-center justify-center">
-  //       <p className="text-gray-800 text-lg">No published articles found.</p>
-  //     </div>
-  //   );
-  // }
+  if (publishedArticles.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-xl font-semibold text-gray-600">🚫 No articles available</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 lg:p-6 ">
+    <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+
+      <div className="max-w-7xl mx-auto flex justify-start items-center mb-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isEditing}
+            onChange={() => setIsEditing(!isEditing)}
+            className="w-5 h-5 accent-blue-600 rounded"
+          />
+          <span
+            className={`font-medium transition
+        ${isEditing ? "text-green-600" : "text-blue-600"}`}
+          >
+            {isEditing ? "Save Changes" : "Publish As Adhoc"}
+          </span>
+        </label>
+      </div>
+
+
       <div className="max-w-7xl mx-auto bg-white border-1 border-blue-900 shadow-xl">
-        <header className="bg-[#004682] text-white px-6 py-8 flex justify-between rounded-lg items-center">
-          <img src="/logo-white 1.svg" alt="Logo" className="h-24" />
-          <h1 className="text-5xl text-center font-bold flex-1 font-serif">TPI Newsletter</h1>
+
+        <header className="bg-[#171a39] text-white px-6 py-8 pb-11 flex justify-between rounded-lg items-center">
+          <img src="/mainLogo.png" alt="Logo" className="h-24" />
+          <div className="flex-1 text-center">
+            {isEditing ? (
+              <input
+                title='ss'
+                type="text"
+                value={editableTitle}
+                onChange={(e) => setEditableTitle(e.target.value)}
+                className="text-5xl font-bold text-center font-serif rounded-md p-2 text-black"
+              />
+            ) : (
+              <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
+            )}
+          </div>
           <span className="text-2xl font-bold">{currentDateFormatted}</span>
         </header>
 
         <div className="p-6">
-          <section className="mb-8 p-6 rounded-lg">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800">Editor's Message</h2>
-            <p className="text-lg text-gray-700 leading-relaxed">
-              Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey.
-            </p>
+          <section className="mb-8 p-0 rounded-lg">
+            {/* Editable Heading */}
+            {isEditingTitle ? (
+              <input
+                title='text'
+                type="text"
+                value={editableMessageTitle}
+                onChange={(e) => setEditableMessageTitle(e.target.value)}
+                onBlur={() => setIsEditingTitle(false)} // close input on blur
+                autoFocus
+                className="text-2xl font-bold mb-4 text-gray-800 w-full rounded-md p-2 border border-gray-300"
+              />
+            ) : (
+              <h2
+                className="text-2xl font-bold mb-4 text-gray-800 cursor-text"
+                onClick={() => setIsEditingTitle(true)}
+                title="Click to edit"
+              >
+                {editableMessageTitle}
+              </h2>
+            )}
+
+            {/* Editable Message */}
+            {isEditingMessage ? (
+              <textarea
+                title='text'
+                value={editableMessage}
+                onChange={(e) => setEditableMessage(e.target.value)}
+                onBlur={() => setIsEditingMessage(false)} // close textarea on blur
+                autoFocus
+                rows={5}
+                className="text-lg text-gray-700 leading-relaxed w-full rounded-md p-3 border border-gray-300"
+              />
+            ) : (
+              <p
+                className="text-lg text-gray-700 leading-relaxed cursor-text"
+                onClick={() => setIsEditingMessage(true)}
+                title="Click to edit"
+              >
+                {editableMessage}
+              </p>
+            )}
           </section>
+
 
           <hr className="border-t-2 border-gray-300 mb-8" />
 
+          {/* Issue at a glance */}
           <section className="mb-8">
-            <div className="bg-[#004682] text-white px-3 py-3 rounded-lg w-fit">
+            <div className="bg-[#171a39] text-white px-3 py-3 rounded-lg w-fit">
               <h2 className="text-2xl font-bold">This Issue at a Glance</h2>
             </div>
-            <div className="bg-blue-50 p-6 rounded-b-lg">
+            <div className="bg-blue-50 p-6 mt-3 rounded-lg">
               <ul className="space-y-3">
-                {publishedArticles.map((article, index) => (
+                {publishedArticles.map((article) => (
                   <li key={article.id} className="flex items-center">
                     <svg
                       className="w-5 h-4 mr-3 flex-shrink-0 transform rotate-45 align-middle"
@@ -317,9 +355,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
                     </svg>
-                    <span className="text-lg text-gray-800">
-                      {article.title}
-                    </span>
+                    <span className="text-lg text-gray-800">{article.title}</span>
                   </li>
                 ))}
                 {articleIds.length < 3 &&
@@ -333,9 +369,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
                       </svg>
-                      <span className="text-lg text-gray-500">
-                        Article Slot {articleIds.length + index + 1}: Empty
-                      </span>
+                      <span className="text-lg text-gray-500">Article Slot {articleIds.length + index + 1}: Empty</span>
                     </li>
                   ))}
               </ul>
@@ -344,29 +378,17 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
           <hr className="border-t-2 border-gray-300 mb-8" />
 
-          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{error}</div>}
-          {failedArticleIds.length > 0 && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700 text-sm">
-              Failed to load articles with IDs: {failedArticleIds.join(", ")}
-            </div>
-          )}
-
+          {/* Articles */}
           <div className="max-w-7xl mx-auto">
-            {publishedArticles.map((article, index) => (
+            {publishedArticles.map((article) => (
               <div key={article.id} className="mb-12">
                 <div className="mb-4">
-                  <h2 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight">
-                    {article.title}
-                  </h2>
+                  <h2 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight">{article.title}</h2>
                 </div>
 
                 {article.image_url && (
                   <div className="mb-6 relative">
-                    <img
-                      src={article.image_url}
-                      alt={`Article ${index + 1} Hero`}
-                      className="w-full h-56 object-cover rounded-lg shadow-md"
-                    />
+                    <img src={article.image_url} alt={`Article ${article.id} Hero`} className="w-full h-56 object-cover rounded-lg shadow-md" />
                   </div>
                 )}
 
@@ -435,7 +457,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
               </div>
             ))}
 
-            <div className="bg-[#004682] text-white p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
+            <div className="bg-[#171a39] text-white p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Shield className="h-5 w-5" />
@@ -456,13 +478,61 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                   <span>Website: veteranshelp.org</span>
                 </p>
               </div>
-              <img src="/logo-white 1.svg" alt="Logo" className="h-24 mt-4 md:mt-0" />
+              <img src="/mainLogo.png" alt="Logo" className="h-24 mt-4 md:mt-0" />
             </div>
           </div>
         </div>
       </div>
-      <div className='fixed bottom-2  right-0'>
-        <button className='w-[220px] h-12 bg-black rounded-md  text-white' onClick={handleExportPDF}>Export Newsletter </button>
+
+      {/* Floating Actions */}
+      <div className="fixed bottom-5 right-5 flex flex-col items-end gap-3">
+        {open && (
+          <div className="flex flex-col gap-3 mb-2 animate-slide-up">
+            <button
+              className="flex items-center justify-center gap-2 w-[180px] h-11 bg-[#171a39] rounded-lg text-white font-medium shadow-md hover:opacity-90 transition disabled:opacity-60"
+              onClick={handleExportPDF}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <>
+                  <ImSpinner2 className="text-lg animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <FaFilePdf className="text-lg" />
+                  Export PDF
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handlePublishNewsletter}
+              disabled={publishing}
+              className="flex items-center justify-center gap-2 w-[180px] h-11 border-2 border-[#171a39] rounded-lg text-[#171a39] font-medium shadow-md hover:bg-[#171a39] hover:text-white transition disabled:opacity-60"
+            >
+              {publishing ? (
+                <>
+                  <ImSpinner2 className="text-lg animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <MdPublishedWithChanges className="text-lg" />
+                  Published
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Floating Toggle Button */}
+        <button
+          className="w-14 h-14 rounded-full bg-[#171a39] text-white shadow-lg flex items-center justify-center hover:opacity-90 transition"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? <IoMdClose size={28} /> : <IoMdAdd size={28} />}
+        </button>
       </div>
     </div>
   );
