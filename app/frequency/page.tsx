@@ -12,7 +12,7 @@ const Page = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
 
-    const frequencyOptions = ["Daily", "Weekly", "Monthly", "Custom"];
+    const frequencyOptions = ["Weekly", "Monthly", "Custom"];
 
     const handleSaveSettings = async () => {
         if (!frequency) {
@@ -33,7 +33,7 @@ const Page = () => {
             custom_days:
                 frequency === "Custom" ? Number(customDays) : null, // send number if custom
             num_articles: numArticles,
-            max_size:  Number(numArticles),
+            max_size: Number(numArticles),
         };
 
         setLoading(true);
@@ -116,17 +116,15 @@ const Page = () => {
                         />
                     </div>
 
-                    {/* Max Size */}
                     <div className="mb-4">
                         <label className="block text-gray-700 mb-2">Advertisement</label>
-                        <input
-                            title="asda"
-                            type="text"
-                            min={1}
-                            value={maxSize}
-                            
-                            className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />
+                        <select
+                            disabled
+                            className="w-full border border-gray-300 rounded-lg p-2 bg-gray-100 text-gray-500 cursor-not-allowed"
+                            title="Coming Soon"
+                        >
+                            <option>Coming Soon</option>
+                        </select>
                     </div>
 
                     {/* Save Button */}

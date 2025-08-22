@@ -301,7 +301,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
         <div className="p-4 border-t border-gray-700 flex flex-col gap-4">
           <button
             onClick={() => route.push("/frequency")}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            className="w-full flex items-center justify-center gap-2 bg-[#004682] hover:bg-blue-700 text-white px-4 py-2 rounded"
           >
             <FaRegNewspaper /> Newsletter Settings
           </button>
