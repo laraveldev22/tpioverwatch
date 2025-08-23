@@ -1,13 +1,8 @@
 "use client";
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Mail, Phone, Shield, Globe } from 'lucide-react';
 import axios from 'axios';
-import { FaFilePdf } from 'react-icons/fa';
-import { MdPublishedWithChanges } from "react-icons/md";
-import { ImSpinner2 } from "react-icons/im";
-import { IoMdAdd, IoMdClose } from "react-icons/io";
- import toast from 'react-hot-toast';
 
 interface FullArticle {
   id: string;
@@ -27,37 +22,19 @@ interface FullArticle {
   conversation_session?: string;
 }
 
-// Helper function to format date as DD-month-YYYY
-const formatDateForSlug = (date: Date): string => {
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = date.toLocaleString('en-AU', { month: 'long' }).toLowerCase();
-  const year = date.getFullYear();
-  return `tpi-newsletter-publisheddate-${day}-${month}-${year}`;
-};
-
-export default function NewsletterPublish({ params }: { params: Promise<{ slug: string }> }) {
+ 
+ function NewsletterPublishs() {
   const [publishedArticles, setPublishedArticles] = useState<FullArticle[]>([]);
-  const [publishedArticlesPdf, setPublishedArticlesPdf] = useState<any[]>([]);
-  const router = useRouter();
   const [articleIds, setArticleIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingMessage, setIsEditingMessage] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [editableTitle, setEditableTitle] = useState("TPI Newsletter");
   const [editableMessageTitle, setEditableMessageTitle] = useState("Editor's Message");
   const [editableMessage, setEditableMessage] = useState(
     "Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
   );
-  const [publishing, setPublishing] = useState(false);
-
-
-  const { slug } = use(params);
-
+  const searchParams = useSearchParams();
+  const slug = searchParams.get("slug"); // ✅ get slug from query
   const currentDate = new Date();
-  const expectedSlug = formatDateForSlug(currentDate);
 
   const formatKeyFacts = (keyFacts: string | string[] | undefined): string[] => {
     if (!keyFacts) return [];
@@ -75,71 +52,16 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
     return [];
   };
 
-  const getBase64FromUrl = async (url: string) => {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch image");
-      const blob = await response.blob();
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (err) {
-      console.error("Base64 conversion failed:", err);
-      return ""; // fallback to empty string if image fails
-    }
-  };
-
   const currentDateFormatted = currentDate.toLocaleDateString("en-AU", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 
-  const handleExportPDF = async () => {
-    if (typeof window === "undefined") return;
-
-    setExporting(true);
-    try {
-      // Convert logo to Base64
-      const logoBase64 = await getBase64FromUrl(`${window.location.origin}/mainLogo.png`);
-
-      // Lazy import PDF renderer and your component
-      const { pdf, Document } = await import("@react-pdf/renderer");
-      const NewsletterPDF = (await import("./NewsletterPDF")).default;
-
-      // Generate PDF blob
-      const blob = await pdf(
-        <Document>
-          <NewsletterPDF
-            Logo={logoBase64 || undefined} // fallback if logo fails
-            currentDateFormatted={currentDateFormatted}
-            publishedArticles={publishedArticlesPdf}
-            editableTitle={editableTitle}
-            editableMessage={editableMessage}
-          />
-        </Document>
-      ).toBlob();
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "newsletter.pdf";
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF Export failed:", err);
-    } finally {
-      setExporting(false);
-    }
-  };
-
-
   const fetchArticles = async () => {
     setLoading(true);
     const token = localStorage.getItem("token");
+
     if (!token) {
       console.error("No token found");
       setLoading(false);
@@ -148,83 +70,48 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/articles/?is_newsletter=1`,
+        `${process.env.NEXT_PUBLIC_API_URL}/newsletters/${slug}/with-articles/`,
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      const rawArticles = response?.data?.results.results || response?.data || [];
+      // The API returns the newsletter object at root
+      const newsletter = response?.data.newsletter;
 
-      const transformedArticles = rawArticles
-        .filter((article: any) => !!article)
-        .map((article: any) => ({
-          id: article.id,
-          title: article.title,
-          byline: article.byline,
-          lead_paragraph: article.lead_paragraph,
-          content: article.content,
-          image_url: article.image_url,
-          key_facts: formatKeyFacts(article.key_facts),
-          quote_block: article.quote_block,
-          tags: article.tags,
-          created_at: article.updated_at || article.created_at,
-          cta: article.cta || "",
-        }));
-      const allArticleIds = transformedArticles.map((article: any) => article.id);
+      if (!newsletter || !newsletter.included_articles) {
+        console.warn("No articles found in response:", response.data);
+        setPublishedArticles([]);
+
+        setArticleIds([]);
+        return;
+      }
+
+      const transformedArticles = newsletter.included_articles.map((article: any) => ({
+        id: article.id,
+        title: article.title || "Untitled",
+        byline: article.byline || "",
+        lead_paragraph: article.lead_paragraph || "",
+        content: article.content || "",
+        image_url: article.image_url || "",
+        key_facts: formatKeyFacts(article.key_facts || ""),
+        quote_block: article.quote_block || "",
+        tags: article.tags || "",
+        created_at: article.updated_at || article.created_at || new Date().toISOString(),
+        cta: article.cta || "",
+      }));
+      const allArticleIds = transformedArticles.map((a: any) => a.id);
       setArticleIds(allArticleIds);
-      setPublishedArticlesPdf(transformedArticles);
       setPublishedArticles(transformedArticles);
-    } catch (error) {
-      console.error("Error fetching articles:", error);
+      setEditableTitle(newsletter.title)
+      setEditableMessageTitle(newsletter.message)
+      setEditableMessage(newsletter.message_description)
+    } catch (error: any) {
+      console.error("Error fetching articles:", error?.response?.data || error.message);
+      setPublishedArticles([]);
+      setArticleIds([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const handlePublishNewsletter = async () => {
-    if (articleIds.length === 0) return; // nothing to publish
-    setPublishing(true);
-    const token = localStorage.getItem("token");
-    try {
-      const payload = {
-        title: editableTitle,
-        newsletter_url: `${process.env.NEXT_PUBLIC_API_URL}/newsletters/${slug}`,
-        ad_hoc: false,
-        articles: articleIds, // use all stored IDs
-        message:editableMessageTitle,
-        message_description:editableMessage
-
-
-      };
-
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/newsletters/publish/`,
-        payload,
-        { headers: { Authorization: `Token ${token}` } }
-      );
-
-      router.push("/dashboard")
-    } catch (error:any) {
-       toast.error(error.response.data.error)
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (slug !== expectedSlug) {
-      router.replace(`/${expectedSlug}`);
-      return;
-    }
-    if (typeof window !== "undefined") {
-      try {
-        const savedPublishedIds = localStorage.getItem("publishedArticleIds");
-        const parsedIds = savedPublishedIds ? JSON.parse(savedPublishedIds) : [];
-        if (Array.isArray(parsedIds)) setArticleIds(parsedIds);
-      } catch (err) {
-        console.error("Error parsing publishedArticleIds:", err);
-      }
-    }
-  }, [slug, router]);
 
   useEffect(() => {
     fetchArticles();
@@ -254,92 +141,36 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto flex justify-start items-center mb-4">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isEditing}
-            onChange={() => setIsEditing(!isEditing)}
-            className="w-5 h-5 accent-blue-600 rounded"
-          />
-          <span
-            className={`font-medium transition
-        ${isEditing ? "text-green-600" : "text-blue-600"}`}
-          >
-            {isEditing ? "Save Changes" : "Publish As Adhoc"}
-          </span>
-        </label>
-      </div>
-
-
       <div className="max-w-7xl mx-auto bg-white border-1 border-blue-900 shadow-xl">
-
         <header className="bg-[#171a39] text-white px-6 py-8 pb-11 flex justify-between rounded-lg items-center">
           <img src="/mainLogo.png" alt="Logo" className="h-24" />
           <div className="flex-1 text-center">
-            {isEditing ? (
-              <input
-                title='ss'
-                type="text"
-                value={editableTitle}
-                onChange={(e) => setEditableTitle(e.target.value)}
-                className="text-5xl font-bold text-center font-serif rounded-md p-2 text-black"
-              />
-            ) : (
-              <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
-            )}
+            <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
           </div>
           <span className="text-2xl font-bold">{currentDateFormatted}</span>
         </header>
 
         <div className="p-6">
           <section className="mb-8 p-0 rounded-lg">
-            {/* Editable Heading */}
-            {isEditingTitle ? (
-              <input
-                title='text'
-                type="text"
-                value={editableMessageTitle}
-                onChange={(e) => setEditableMessageTitle(e.target.value)}
-                onBlur={() => setIsEditingTitle(false)} // close input on blur
-                autoFocus
-                className="text-2xl font-bold mb-4 text-gray-800 w-full rounded-md p-2 border border-gray-300"
-              />
-            ) : (
-              <h2
-                className="text-2xl font-bold mb-4 text-gray-800 cursor-text"
-                onClick={() => setIsEditingTitle(true)}
-                title="Click to edit"
-              >
-                {editableMessageTitle}
-              </h2>
-            )}
+            <h2
+              className="text-2xl font-bold mb-4 text-gray-800 cursor-text"
+              title="Click to edit"
+            >
+              {editableMessageTitle ?? "N/A"}
+            </h2>
 
             {/* Editable Message */}
-            {isEditingMessage ? (
-              <textarea
-                title='text'
-                value={editableMessage}
-                onChange={(e) => setEditableMessage(e.target.value)}
-                onBlur={() => setIsEditingMessage(false)} // close textarea on blur
-                autoFocus
-                rows={5}
-                className="text-lg text-gray-700 leading-relaxed w-full rounded-md p-3 border border-gray-300"
-              />
-            ) : (
-              <p
-                className="text-lg text-gray-700 leading-relaxed cursor-text"
-                onClick={() => setIsEditingMessage(true)}
-                title="Click to edit"
-              >
-                {editableMessage}
-              </p>
-            )}
+
+            <p
+              className="text-lg text-gray-700 leading-relaxed cursor-text"
+              title="Click to edit"
+            >
+              {editableMessage ?? "N/A"}
+            </p>
+
           </section>
 
-
           <hr className="border-t-2 border-gray-300 mb-8" />
-
           {/* Issue at a glance */}
           <section className="mb-8">
             <div className="bg-[#171a39] text-white px-3 py-3 rounded-lg w-fit">
@@ -485,57 +316,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
           </div>
         </div>
       </div>
-
-      {/* Floating Actions */}
-      <div className="fixed bottom-5 right-5 flex flex-col items-end gap-3">
-        {open && (
-          <div className="flex flex-col gap-3 mb-2 animate-slide-up">
-            <button
-              className="flex items-center justify-center gap-2 w-[180px] h-11 bg-[#171a39] rounded-lg text-white font-medium shadow-md hover:opacity-90 transition disabled:opacity-60"
-              onClick={handleExportPDF}
-              disabled={exporting}
-            >
-              {exporting ? (
-                <>
-                  <ImSpinner2 className="text-lg animate-spin" />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <FaFilePdf className="text-lg" />
-                  Export PDF
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={handlePublishNewsletter}
-              disabled={publishing}
-              className="flex items-center justify-center gap-2 w-[180px] h-11 border-2 border-[#171a39] rounded-lg text-[#171a39] font-medium shadow-md hover:bg-[#171a39] hover:text-white transition disabled:opacity-60"
-            >
-              {publishing ? (
-                <>
-                  <ImSpinner2 className="text-lg animate-spin" />
-                  Publishing...
-                </>
-              ) : (
-                <>
-                  <MdPublishedWithChanges className="text-lg" />
-                  Published
-                </>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Floating Toggle Button */}
-        <button
-          className="w-14 h-14 rounded-full bg-[#171a39] text-white shadow-lg flex items-center justify-center hover:opacity-90 transition"
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <IoMdClose size={28} /> : <IoMdAdd size={28} />}
-        </button>
-      </div>
     </div>
   );
 }
+export default NewsletterPublishs

@@ -1,15 +1,16 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
-import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog } from "react-icons/fa";
+import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic } from "react-icons/fa";
 import { Loader2, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useRouter } from 'nextjs-toploader/app';
 import Cookies from "js-cookie";
-import {  FaRegNewspaper } from "react-icons/fa";
+import { FaRegNewspaper } from "react-icons/fa";
+import axios from "axios";
 
- 
+
 interface DashboardLayoutProps {
   children?: ReactNode;
   getPrompts?: (value: string) => void
@@ -131,6 +132,34 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
     Cookies.remove("token")
     window.location.href = "/";
   };
+  const [loading, setLoading] = useState(false);
+
+  // Auto-generate API call
+  const handleAutoGenerate = async () => {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/auto-generate/article/1/`,
+        {},
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("Generated Articles:", response.data);
+
+      // 🔄 Page reload
+      window.location.reload();
+    } catch (err) {
+      console.error("Error generating articles:", err);
+    }
+    setLoading(false);
+  };
+
 
   const fetchConversationTitles = async () => {
     const token = localStorage.getItem("token");
@@ -249,30 +278,42 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
           <div>
             <p className="text-sm font-semibold text-gray-300 mb-3">Article Threads</p>
             <div className="space-y-2">
-              {conversationTitles.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between p-3 bg-[#1f234b] rounded-lg cursor-pointer 
-                   hover:bg-[#24294f] hover:scale-105 transition-all duration-200 ease-in-out
-                   border-l-4 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg"
-                  title={c.title} // Shows full title on hover
-                >
-                  <p className="text-sm text-gray-200 font-medium truncate">{c.title}</p>
-                  <div className="flex items-center gap-2">
-                    {/* Optional icon */}
-                    <svg
-                      className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+              {[...new Map(conversationTitles.map((c) => [c.title, c])).values()].map(
+                (c) => {
+                  // short name function
+                  const shortName =
+                    c.title.length > 25 ? c.title.substring(0, 25) + "..." : c.title;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between p-3 bg-[#1f234b] rounded-lg cursor-pointer 
+              hover:bg-[#24294f] hover:scale-105 transition-all duration-200 ease-in-out
+              border-l-4 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg group"
+                      title={c.title} // full title on hover
                     >
-                      <path d="M6 2a1 1 0 00-1 1v14l6-4 6 4V3a1 1 0 00-1-1H6z" />
-                    </svg>
-                    <span className="text-xs text-gray-400">{/* Optional date/time */}</span>
-                  </div>
-                </div>
-              ))}
+                      <p className="text-sm text-gray-200 font-medium">{shortName}</p>
+                      <div className="flex items-center gap-2">
+                        {/* Optional icon */}
+                        <svg
+                          className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M6 2a1 1 0 00-1 1v14l6-4 6 4V3a1 1 0 00-1-1H6z" />
+                        </svg>
+                        <span className="text-xs text-gray-400">
+                          {/* e.g. date/time */}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+              )}
             </div>
           </div>
+
+
 
           {/* Prompts */}
           <div>
@@ -300,7 +341,24 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
         {/* Logout at Bottom */}
         <div className="p-4 border-t border-gray-700 flex flex-col gap-4">
           <button
-            onClick={() => route.push("/frequency")}
+            onClick={handleAutoGenerate}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 
+                   hover:scale-105 hover:shadow-lg transition-all duration-300 text-white px-4 py-2 rounded disabled:opacity-70"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FaMagic /> Auto Generate
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => route.push("/setting")}
             className="w-full flex items-center justify-center gap-2 bg-[#004682] hover:bg-blue-700 text-white px-4 py-2 rounded"
           >
             <FaRegNewspaper /> Newsletter Settings

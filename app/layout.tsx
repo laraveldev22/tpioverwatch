@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import NextTopLoader from 'nextjs-toploader';
-
+import { TopLoader } from './RootLayout';
 import './globals.css'
+
 
 export const metadata: Metadata = {
   title: 'TPI - Veterans Overwatch ',
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     icon: '/fav.png',
   },
 }
- 
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -21,14 +21,17 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <style>{`
-html {
+    html {
   font-family: ${GeistSans.style.fontFamily};
   --font-sans: ${GeistSans.variable};
   --font-mono: ${GeistMono.variable};
 }
         `}</style>
       </head>
-      <body> <NextTopLoader />{children}</body>
+      <body suppressHydrationWarning={true}>
+        {children}
+        <TopLoader />
+      </body>
     </html>
   )
 }

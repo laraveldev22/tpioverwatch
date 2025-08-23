@@ -5,6 +5,7 @@ import DashboardLayout from "../layout/DashboardLayout";
 import axios from "axios";
 import { FiSearch } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Article {
   id: string;
@@ -24,6 +25,7 @@ interface Newsletter {
   included_articles: Article[];
   created_at: string;
   updated_at: string;
+  slug: string;
 }
 
 const ArticlesPage = () => {
@@ -32,8 +34,8 @@ const ArticlesPage = () => {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const router = useRouter();
 
-  // Fetch newsletters
   const fetchNewsletters = async () => {
     setLoading(true);
     const token = localStorage.getItem("token");
@@ -60,7 +62,6 @@ const ArticlesPage = () => {
     fetchNewsletters();
   }, []);
 
-  // Filtered & paginated newsletters
   const filtered = newsletters.filter((nl) =>
     nl.title.toLowerCase().includes(search.toLowerCase())
   );
@@ -103,29 +104,37 @@ const ArticlesPage = () => {
           <table className="min-w-full divide-y divide-gray-200 table-fixed">
             <thead className="bg-[#171a39] text-white">
               <tr>
-                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Title</th>
-                <th className="w-1/12 px-6 py-3 text-left text-sm font-medium uppercase">Ad Hoc</th>
-                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Newsletter URL</th>
-                <th className="w-1/4 px-6 py-3 text-left text-sm font-medium uppercase">Included Articles</th>
-                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Created</th>
-                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Updated</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Title</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Ad Hoc</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Newsletter URL</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Included Articles</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Created</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Updated</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginated.map((nl) => (
                 <tr
                   key={nl.id}
-                  className="hover:bg-[#fef3c7] transition-colors duration-200 cursor-pointer"
+                  className="hover:bg-[#fef3c7] transition-colors duration-200"
                 >
                   <td className="px-6 py-4 text-sm text-gray-700 truncate">{nl.title}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{nl.ad_hoc ? "Yes" : "No"}</td>
                   <td className="px-6 py-4 text-sm text-blue-600 underline truncate">
-                    <a href={nl.newsletter_url} target="_blank" rel="noopener noreferrer">
+                    <button
+                      onClick={() => router.push(`/news-letter?slug=${nl.slug}`)}
+                      className="text-blue-600 hover:underline"
+                    >
                       View
-                    </a>
+                    </button>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700 truncate">
-                    {nl.included_articles.map((article) => article.title).join(", ")}
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    <button
+                      onClick={() => router.push(`/news-letter-articals?newsletter=${nl.id}`)}
+                      className="px-3 py-1 bg-[#171a39] text-white rounded-lg text-xs hover:bg-[#2a2d55] transition"
+                    >
+                      View Articles ({nl.included_articles.length})
+                    </button>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 truncate">
                     {new Date(nl.created_at).toLocaleDateString()}

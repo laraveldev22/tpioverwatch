@@ -5,6 +5,7 @@ import DashboardLayout from "../layout/DashboardLayout";
 import axios from "axios";
 import { FiSearch } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 interface Article {
     id: string;
@@ -20,12 +21,14 @@ const ArticlesPage = () => {
     const [articles, setArticles] = useState<Article[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
-
     const [currentPage, setCurrentPage] = useState(1);
+    const [title, setTitle] = useState()
+    const searchParams = useSearchParams();
+    const newsletterId = searchParams.get("newsletter"); // ✅ this gives your ID
     const itemsPerPage = 5;
 
     // Fetch articles from API
-    const fetchArticles = async () => {
+    const fetchArticles = async (newsletterId: string | number) => {
         setLoading(true);
 
         const token = localStorage.getItem("token");
@@ -33,21 +36,32 @@ const ArticlesPage = () => {
             setLoading(false);
             return;
         }
+
         try {
-            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/articles/`, {
-                headers: { Authorization: `Token ${token}` },
-            });
-            console.log(response, "response")
-            setArticles(response?.data?.results?.results);
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/newsletters/articles/`,
+                { newsletter_id: newsletterId }, // send ID in body
+                {
+                    headers: {
+                        Authorization: `Token ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                }
+            );
+
+            console.log(response.data, "response");
+            setArticles(response?.data?.articles || []); // ✅ adjust based on API response
+            setTitle(response?.data.newsletter_title)
         } catch (error) {
             console.error("Error fetching articles:", error);
         } finally {
             setLoading(false);
         }
     };
+    ;
 
     useEffect(() => {
-        fetchArticles();
+        if (newsletterId) fetchArticles(newsletterId);
     }, []);
 
 
@@ -70,7 +84,7 @@ const ArticlesPage = () => {
         <DashboardLayout>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-                <h2 className="text-2xl font-bold text-[#171a39] capitalize">Articles List</h2>
+                <h2 className="text-2xl font-bold text-[#171a39] capitalize">Articles in {title}</h2>
 
                 <div className="relative max-w-sm w-full">
                     <input

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { useRouter } from 'next/navigation';
 import { pdf } from "@react-pdf/renderer";
-import ArticlePDF, { ArticlePDFProps } from '../deno2/ArticlePDF';
+import ArticlePDF, { ArticlePDFProps } from './ArticlePDF';
 import axios from 'axios';
 import { FaEye } from 'react-icons/fa';
 
@@ -461,12 +461,7 @@ const page = () => {
             clearError();
             return;
         }
-        if (publishedArticleIds.length >= 10) {
-            setError("Cannot publish more than 10 articles");
-            clearError();
-            return;
-        }
-
+     
         setArticleSaving(true);
         setSaveSuccess(null);
         try {
@@ -686,9 +681,11 @@ const page = () => {
     const fetchArticles = async () => {
         setLoading(true);
 
-        const token = localStorage.getItem("token");
+        const token =
+            typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
         if (!token) {
-            console.error("No token found");
+           
             setLoading(false);
             return;
         }
