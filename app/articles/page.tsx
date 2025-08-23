@@ -22,7 +22,7 @@ const ArticlesPage = () => {
     const [loading, setLoading] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 50;
+    const itemsPerPage = 10;
 
     // Fetch articles from API
     const fetchArticles = async () => {
