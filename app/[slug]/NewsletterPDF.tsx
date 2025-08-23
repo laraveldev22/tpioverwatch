@@ -414,7 +414,7 @@ const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
                     <Text style={styles.text}>National Veterans Helpline</Text>
                 </View>
                 <View style={styles.rows}>
-                    <Text style={styles.text}>PO Box 400, Adelaide SA 5000</Text>
+                    <Text style={styles.text}>171 Richmond Rd, Richmond SA 5033</Text>
                 </View>
 
                 <View style={styles.rows}>
@@ -424,7 +424,7 @@ const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
                             fill="white"
                         />
                     </Svg>
-                    <Text style={styles.text}>Freecall: 1800 VET HELP (1800 838 4357)</Text>
+                    <Text style={styles.text}>Freecall: 1800 VET HELP (08 8351 8140)</Text>
                 </View>
 
                 <View style={styles.rows}>
@@ -434,7 +434,7 @@ const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
                             fill="white"
                         />
                     </Svg>
-                    <Text style={styles.text}>Email: support@veteranshelp.org</Text>
+                    <Text style={styles.text}>Email: office@tpi-sa.com.au</Text>
                 </View>
                 <View style={styles.rows}>
                     <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
@@ -443,7 +443,7 @@ const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
                             fill="white"
                         />
                     </Svg>
-                    <Text style={styles.text}>Website: veteranshelp.org</Text>
+                    <Text style={styles.text}>Website: https://tpi-sa.com.au</Text>
                 </View>
 
             </View>

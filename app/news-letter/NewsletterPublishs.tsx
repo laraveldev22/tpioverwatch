@@ -60,13 +60,6 @@ interface FullArticle {
 
   const fetchArticles = async () => {
     setLoading(true);
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      console.error("No token found");
-      setLoading(false);
-      return;
-    }
 
     try {
       const response = await axios.get(

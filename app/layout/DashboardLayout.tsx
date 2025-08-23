@@ -207,12 +207,13 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 bg-[#171a39] text-white w-72 shadow-lg transform transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-          md:translate-x-0 md:static md:flex-shrink-0 flex flex-col`}
+        className={`fixed inset-y-0 left-0 bg-[#171a39] text-white shadow-lg transform transition-transform duration-300 ease-in-out
+  ${sidebarOpen ? "translate-x-0 w-72 z-20" : "-translate-x-full"} 
+  md:translate-x-0 md:static md:flex-shrink-0 md:w-[20%] flex flex-col`}
+
       >
         {/* Logo */}
         <div className="p-4 flex items-center gap-2 border-b border-gray-700">
@@ -381,7 +382,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col w-[80%]">
         {/* Topbar */}
         <header className="flex items-center justify-between bg-white shadow px-6 py-4">
           <div className="flex items-center gap-3">
@@ -406,7 +407,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
 
         {/* Page Content */}
         <main className="flex-1 p-6 overflow-auto">
-          {children ?? <div className="text-gray-500">Your content goes here...</div>}
+          {children}
         </main>
       </div>
     </div>

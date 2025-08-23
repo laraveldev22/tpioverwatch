@@ -87,7 +87,7 @@ const ArticlesPage = () => {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto bg-white shadow rounded-lg">
+            <div className="overflow-x-auto bg-white shadow rounded-lg w-full">
                 {loading ? (
                     <div className="flex justify-center items-center py-10 h-full">
                         <Loader2 className="animate-spin h-8 w-8 text-[#e8be5a]" />

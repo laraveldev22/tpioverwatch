@@ -7,7 +7,7 @@ import { FaFilePdf } from 'react-icons/fa';
 import { MdPublishedWithChanges } from "react-icons/md";
 import { ImSpinner2 } from "react-icons/im";
 import { IoMdAdd, IoMdClose } from "react-icons/io";
- import toast from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface FullArticle {
   id: string;
@@ -46,6 +46,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAdhoc, setIsAdhoc] = useState(false)
   const [editableTitle, setEditableTitle] = useState("TPI Newsletter");
   const [editableMessageTitle, setEditableMessageTitle] = useState("Editor's Message");
   const [editableMessage, setEditableMessage] = useState(
@@ -148,11 +149,11 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/articles/?is_newsletter=1`,
+        `${process.env.NEXT_PUBLIC_API_URL}/articles/latest/?is_newsletter=1`,
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      const rawArticles = response?.data?.results.results || response?.data || [];
+      const rawArticles = response?.data?.results || response?.data || [];
 
       const transformedArticles = rawArticles
         .filter((article: any) => !!article)
@@ -188,12 +189,10 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
       const payload = {
         title: editableTitle,
         newsletter_url: `${process.env.NEXT_PUBLIC_API_URL}/newsletters/${slug}`,
-        ad_hoc: false,
+        ad_hoc: isAdhoc,
         articles: articleIds, // use all stored IDs
-        message:editableMessageTitle,
-        message_description:editableMessage
-
-
+        message: editableMessageTitle,
+        message_description: editableMessage
       };
 
       await axios.post(
@@ -203,8 +202,8 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
       );
 
       router.push("/dashboard")
-    } catch (error:any) {
-       toast.error(error.response.data.error)
+    } catch (error: any) {
+      toast.error(error.response.data.error)
     } finally {
       setPublishing(false);
     }
@@ -254,22 +253,49 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto flex justify-start items-center mb-4">
+      <div className="max-w-7xl mx-auto flex justify-between items-center mb-4">
+        {/* Left side: checkbox + label */}
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={isEditing}
-            onChange={() => setIsEditing(!isEditing)}
+            checked={isAdhoc}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setIsEditing(checked);
+
+              if (checked) {
+                // ✅ Enable adhoc
+                setIsAdhoc(true);
+              } else {
+
+                setIsAdhoc(false);
+                setEditableTitle("TPI Newsletter")
+                setEditableMessageTitle("Editor's Message")
+                setEditableMessage("Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
+                )
+
+              }
+            }}
             className="w-5 h-5 accent-blue-600 rounded"
           />
-          <span
-            className={`font-medium transition
-        ${isEditing ? "text-green-600" : "text-blue-600"}`}
-          >
-            {isEditing ? "Save Changes" : "Publish As Adhoc"}
+          <span className="font-medium transition text-blue-600">
+            Special Newsletter
           </span>
+
         </label>
+
+        {/* Right side: Save button */}
+        {
+          isAdhoc&&  <button
+          onClick={() => setIsEditing(false)}
+          className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg shadow hover:bg-green-700 transition"
+        >
+          Save
+        </button>
+        }
+      
       </div>
+
 
 
       <div className="max-w-7xl mx-auto bg-white border-1 border-blue-900 shadow-xl">
@@ -466,18 +492,18 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                   <span className="font-bold">Veteran Support Line</span>
                 </div>
                 <p>National Veterans Helpline</p>
-                <p>PO Box 400, Adelaide SA 5000</p>
+                <p>171 Richmond Rd, Richmond SA 5033</p>
                 <p className="flex items-center space-x-2">
                   <Phone className="h-5 w-5" />
-                  <span>Freecall: 1800 VET HELP (1800 838 4357)</span>
+                  <span>Freecall: 1800 VET HELP (08 8351 8140)</span>
                 </p>
                 <p className="flex items-center space-x-2">
                   <Mail className="h-5 w-5" />
-                  <span>Email: support@veteranshelp.org</span>
+                  <span>Email: office@tpi-sa.com.au</span>
                 </p>
                 <p className="flex items-center space-x-2">
                   <Globe className="h-5 w-5" />
-                  <span>Website: veteranshelp.org</span>
+                  <span>Website: https://tpi-sa.com.au</span>
                 </p>
               </div>
               <img src="/mainLogo.png" alt="Logo" className="h-24 mt-4 md:mt-0" />
@@ -511,7 +537,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
             <button
               onClick={handlePublishNewsletter}
               disabled={publishing}
-              className="flex items-center justify-center gap-2 w-[180px] h-11 border-2 border-[#171a39] rounded-lg text-[#171a39] font-medium shadow-md hover:bg-[#171a39] hover:text-white transition disabled:opacity-60"
+              className="flex items-center justify-center gap-2 w-[180px] h-11 border-2  bg-white border-[#171a39] rounded-lg text-[#171a39] font-medium shadow-md hover:bg-[#171a39] hover:text-white transition disabled:opacity-60"
             >
               {publishing ? (
                 <>
@@ -521,7 +547,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
               ) : (
                 <>
                   <MdPublishedWithChanges className="text-lg" />
-                  Published
+                  Publish
                 </>
               )}
             </button>

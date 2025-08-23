@@ -11,7 +11,8 @@ import { useRouter } from 'next/navigation';
 import { pdf } from "@react-pdf/renderer";
 import ArticlePDF, { ArticlePDFProps } from './ArticlePDF';
 import axios from 'axios';
-import { FaEye } from 'react-icons/fa';
+import { FaEye, FaFilePdf, FaGripVertical, FaTrash } from 'react-icons/fa';
+import { CgSpinner } from "react-icons/cg";
 
 const articleCategories = {
     A: "Feature Story",
@@ -78,7 +79,7 @@ const page = () => {
     const [editedTags, setEditedTags] = useState("");
     const [loading, setLoading] = useState(false);
     const [articles, setArticles] = useState<Article[]>([]);
-
+    const [newsletters, setNewsLetters] = useState<Article[]>([]);
     const titleRef = useRef<HTMLTextAreaElement>(null);
     const bylineRef = useRef<HTMLInputElement>(null);
     const leadParagraphRef = useRef<HTMLTextAreaElement>(null);
@@ -86,6 +87,10 @@ const page = () => {
     const keyFactsRef = useRef<HTMLTextAreaElement>(null);
     const quoteBlockRef = useRef<HTMLTextAreaElement>(null);
     const ctaRef = useRef<HTMLInputElement>(null);
+    const [newsletterLoader, setnewsLetterLoader] = useState(true)
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+
 
     const [articleData, setArticleData] = useState<{ [key: string]: Article[] }>({
         A: [], B: [], C: [], D: [],
@@ -163,6 +168,16 @@ const page = () => {
         }
     }, [token, router, clearError]);
 
+    const handleDrop = (dropIndex: number) => {
+        if (draggedIndex === null) return;
+
+        const updatedList = [...newsletters];
+        const [draggedItem] = updatedList.splice(draggedIndex, 1);
+        updatedList.splice(dropIndex, 0, draggedItem);
+
+        setNewsLetters(updatedList);
+        setDraggedIndex(null);
+    };
 
     const handleImageUpload = async (file: File) => {
         if (!currentArticle || !token) {
@@ -365,6 +380,67 @@ const page = () => {
         if (fullArticle) setCurrentArticle(fullArticle.article);
     }, [fetchArticleDetails]);
 
+    const normalizeArticle = (article: Article) => {
+        let keyFacts: string[] = [];
+
+        if (Array.isArray(article.key_facts)) {
+            keyFacts = article.key_facts;
+        } else if (typeof article.key_facts === "string") {
+            try {
+                // Try parsing if it's a JSON-like string
+                const parsed = JSON.parse(article.key_facts.replace(/'/g, '"'));
+                if (Array.isArray(parsed)) {
+                    keyFacts = parsed;
+                } else {
+                    // fallback split by line breaks or commas
+                    keyFacts = article.key_facts
+                        .split(/\r?\n|,/)
+                        .map((f) => f.trim())
+                        .filter(Boolean);
+                }
+            } catch {
+                keyFacts = article.key_facts
+                    .split(/\r?\n|,/)
+                    .map((f) => f.trim())
+                    .filter(Boolean);
+            }
+        }
+
+        return {
+            ...article,
+            key_facts: keyFacts,
+        };
+    };
+
+    const downloadPdf = async (article: Article) => {
+        const normalizedArticle = normalizeArticle(article);
+        const pdfProps: ArticlePDFProps = {
+            currentArticle: {
+                image_url: normalizedArticle.image_url ?? "",
+                created_at: normalizedArticle.created_at ?? "",
+            },
+            editedTitle: normalizedArticle.title ?? "",
+            editedByline: normalizedArticle.byline ?? "",
+            editedLeadParagraph: normalizedArticle.lead_paragraph ?? "",
+            editedContent: normalizedArticle.content ?? "",
+            editedKeyFacts: normalizedArticle.key_facts as string[],
+            editedQuoteBlock: normalizedArticle.quote_block ?? "",
+            editedTags: normalizedArticle.tags ?? "",
+            editedCta: normalizedArticle.cta ?? "",
+        };
+
+        const blob = await pdf(<ArticlePDF {...pdfProps} />).toBlob();
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${normalizedArticle.title?.replace(/\s+/g, "_") || "article"}.pdf`;
+        link.click();
+
+        URL.revokeObjectURL(url);
+        handleExportPDF();
+    };
+
     const handleCategoryClick = useCallback((category: string) => {
         setSelectedCategory(category);
         setCurrentArticle(null);
@@ -461,7 +537,7 @@ const page = () => {
             clearError();
             return;
         }
-     
+
         setArticleSaving(true);
         setSaveSuccess(null);
         try {
@@ -507,6 +583,7 @@ const page = () => {
             });
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article published successfully!");
+            window.location.reload();
         } catch (err) {
             setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
             clearError();
@@ -522,11 +599,11 @@ const page = () => {
             clearError();
             return;
         }
-        if (!confirm(`Are you sure you want to unpublish the article "${currentArticle.title}"?`)) return;
+
         setArticleSaving(true);
         setSaveSuccess(null);
         try {
-            const updatedArticle = { ...currentArticle, is_newsletter: false };
+            const updatedArticle = { ...currentArticle, is_newsletter: 0 };
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${currentArticle.id}/`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
@@ -685,20 +762,20 @@ const page = () => {
             typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
         if (!token) {
-           
+
             setLoading(false);
             return;
         }
 
         try {
             const response = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/articles/`,
+                `${process.env.NEXT_PUBLIC_API_URL}/articles/latest/`,
                 {
                     headers: { Authorization: `Token ${token}` },
                 }
             );
-
-            const fetchedArticles = response?.data?.results?.results || [];
+            console.log(response, "response")
+            const fetchedArticles = response?.data?.results || [];
 
             // Group by category
             const grouped = { A: [], B: [], C: [], D: [] };
@@ -719,9 +796,87 @@ const page = () => {
         }
     };
 
+    const fetchNewsletters = async () => {
+        setnewsLetterLoader(true);
 
+        const token =
+            typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+        if (!token) {
+
+            setnewsLetterLoader(false);
+            return;
+        }
+
+        try {
+            const response = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/articles/latest/?is_newsletter=1`,
+                {
+                    headers: { Authorization: `Token ${token}` },
+                }
+            );
+            const fetchedArticles = response?.data?.results || [];
+
+            // Group by category
+            const grouped = { A: [], B: [], C: [], D: [] };
+            fetchedArticles.forEach((article: Article) => {
+                //@ts-ignore
+                if (grouped[article?.category]) {
+                    //@ts-ignore
+                    grouped[article?.category].push(article);
+                }
+            });
+
+            setNewsLetters(fetchedArticles);
+            // setArticleData(grouped);
+        } catch (error) {
+            console.error("Error fetching articles:", error);
+        } finally {
+            setnewsLetterLoader(false);
+        }
+    };
+    const remove = async (item: Article) => {
+        handleUnpublish()
+        try {
+            const updatedArticle = { ...currentArticle, is_newsletter: 0 };
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${item.id}/`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
+                body: JSON.stringify(updatedArticle),
+            });
+            if (!response.ok) {
+                if (response.status === 401) {
+                    setError("Authentication failed. Please log in again.");
+                    clearError();
+                    localStorage.removeItem("token");
+                    setToken(null);
+                    router.push("/");
+                    return;
+                }
+                throw new Error("Failed to update article newsletter status");
+            }
+            const savedArticle = await response.json();
+            setPublishedArticleIds((prev) => {
+                const newIds = prev.filter((id) => id !== item.id);
+                localStorage.setItem("publishedArticleIds", JSON.stringify(newIds));
+                console.log("Updated publishedArticleIds after unpublish:", newIds);
+                return newIds;
+            });
+            setCurrentArticle(savedArticle);
+            setSaveSuccess("Article unpublished successfully!");
+            setTimeout(() => setSaveSuccess(null), 2000);
+            window.location.reload();
+        } catch (err) {
+            setError(`Failed to unpublish article: ${err instanceof Error ? err.message : "Unknown error"}`);
+            clearError();
+            console.error("Error unpublishing article:", err);
+        } finally {
+            setArticleSaving(false);
+        }
+    }
     useEffect(() => {
         fetchArticles();
+        fetchNewsletters()
     }, []);
 
     useEffect(() => {
@@ -810,84 +965,138 @@ const page = () => {
                 <main className="flex-1 p-3 lg:p-5 space-y-4 lg:space-y-6">
                     <div className="bg-white shadow-lg border border-gray-100 rounded-lg transform hover:shadow-xl transition-all duration-300">
                         <div className="bg-[#171a39] text-white text-center py-4 rounded-t-lg">
-                            <h2 className="text-lg lg:text-xl font-semibold">ARTICLE SHELF</h2>
-                            <p className="text-xs lg:text-sm text-gray-300 mt-1">Click an article to see it in the Article Frame</p>
+                            <h2 className="text-lg lg:text-xl font-semibold">NEWSLETTER SHELF</h2>
+                            {/* <p className="text-xs lg:text-sm text-gray-300 mt-1">Click an article to see it in the Article Frame</p> */}
                         </div>
                         <div className="p-4 lg:p-6">
                             <div className="mb-4">
-                                <h3 className="text-sm font-medium text-gray-800">Published Articles ({articles.length}/10)</h3>
-                                {articles.length > 0 ? (
-                                    <ul className="space-y-1">
-                                        {articles.map((item, index) => {
-                                            return (
-                                                <li
-                                                    key={item.id}
-                                                    className="bg-gray-100 p-2 rounded text-xs text-gray-700 cursor-pointer hover:bg-blue-50"
-                                                    onClick={() => {
-                                                        handleArticleClick({
-                                                            id: item.id, title: item?.title || "Loading...", category: "A",
-                                                            created_at: ""
-                                                        })
-                                                    }}
-                                                >
-                                                    Slot {index + 1}: {item ? item.title : "Loading..."}
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
+                                {newsletterLoader ? (
+                                    <div className="flex items-center justify-center">
+                                        <CgSpinner className="animate-spin w-10 h-10" />
+                                    </div>
                                 ) : (
-                                    <p className="text-xs text-gray-500">No articles published</p>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {Object.entries(articleCategories).map(([category, categoryName]) => (
-                                    <div
-                                        key={category}
-                                        className="bg-white shadow-md rounded-lg overflow-hidden transform hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                                        onClick={() => handleCategoryClick(category)}
-                                    >
-                                        <div className="bg-[#D5ECFF] px-3 py-3 text-center">
-                                            <h3 className="text-sm font-medium text-gray-800">{categoryName} ({articleData[category]?.length || 0})</h3>
-                                        </div>
-                                        <div className="relative">
-                                            <div className="h-40 overflow-y-auto article-shelf-scroll">
-                                                <div className="p-2 space-y-1">
-                                                    {articleLoading[category] ? (
-                                                        <div className="bg-gray-100 p-3 rounded text-xs text-gray-500 text-center animate-pulse">Loading articles...</div>
-                                                    ) : articleError[category] ? (
-                                                        <div className="bg-red-50 p-3 rounded text-xs text-red-600 text-center">{articleError[category]}</div>
-                                                    ) : (
-                                                        articleData[category].map((article) => (
-                                                            <div
-                                                                key={article.id}
-                                                                className={`shadow-md p-3 rounded text-xs cursor-pointer hover:scale-105 transition-all duration-200 ${currentArticle?.id === article.id ? "bg-[#132A36] text-white" : "bg-gray-100 text-gray-700 hover:bg-blue-50"}`}
-                                                                title={article.title}
-                                                                draggable={true}
-                                                                onDragStart={(e) => {
-                                                                    e.dataTransfer.setData("application/json", JSON.stringify(article));
-                                                                    e.dataTransfer.effectAllowed = "copy";
-                                                                }}
+                                    <>
+                                        {newsletters.length > 0 ? (
+                                            <ul className="space-y-2">
+                                                {newsletters.map((item, index) => (
+                                                    <li
+                                                        key={item.id}
+                                                        draggable
+                                                        onDragStart={() => setDraggedIndex(index)}
+                                                        onDragOver={(e) => e.preventDefault()} // allow drop
+                                                        onDrop={() => handleDrop(index)}
+                                                        className="bg-gray-100 p-3 rounded-lg text-xs text-gray-700 hover:bg-blue-50 transition-colors duration-300 shadow-sm flex items-center gap-2"
+                                                    >
+                                                        {/* Drag Handle */}
+                                                        <span className="cursor-grab text-gray-400">
+                                                            <FaGripVertical size={16} />
+                                                        </span>
+
+                                                        {/* Article Title */}
+                                                        <span
+                                                            className="cursor-pointer font-medium flex-1"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleArticleClick(item);
+                                                            }}
+                                                        >
+                                                            Slot {index + 1}: {item.title}
+                                                        </span>
+
+                                                        {/* Action Buttons */}
+                                                        <div className="flex space-x-2">
+                                                            <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleArticleClick(article);
+                                                                    handleArticleClick(item);
+                                                                    document.getElementById("article")?.scrollIntoView({ behavior: "smooth" });
                                                                 }}
+                                                                className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition duration-300"
+                                                                title="View"
                                                             >
-                                                                {article.title.length > 50 ? `${article.title.substring(0, 50)}...` : article.title}
+                                                                <FaEye size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => downloadPdf(item)}
+                                                                className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition duration-300"
+                                                                title="Export PDF"
+                                                            >
+                                                                <FaFilePdf size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => remove(item)}
+                                                                className="p-2 rounded-full bg-gray-400 text-white hover:bg-gray-500 transition duration-300"
+                                                                title="Remove"
+                                                            >
+                                                                <FaTrash size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-xs text-gray-500">No Article Added To Newsletter</p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
 
-                                                                {article.is_newsletter && (
-                                                                    <span className="ml-2 text-green-500">
-                                                                        (Slot {articleData[category].filter(a => a.is_newsletter).indexOf(article) + 1})
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        ))
-                                                    )}
-                                                </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white shadow-lg border border-gray-100 rounded-lg transform hover:shadow-xl transition-all duration-300">
+                        <div className="bg-[#171a39] text-white text-center py-4 rounded-t-lg">
+                            <h2 className="text-lg lg:text-xl font-semibold">ARTICLE SHELF</h2>
+                            <p className="text-xs lg:text-sm text-gray-300 mt-1">Click an article to see it in the Article Frame</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5">
+                            {Object.entries(articleCategories).map(([category, categoryName]) => (
+                                <div
+                                    key={category}
+                                    className="bg-white shadow-md rounded-lg  overflow-hidden transform hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                                    onClick={() => handleCategoryClick(category)}
+                                >
+                                    <div className="bg-[#D5ECFF] px-3 py-3 text-center">
+                                        <h3 className="text-sm font-medium text-gray-800">{categoryName} ({articleData[category]?.length || 0})</h3>
+                                    </div>
+                                    <div className="relative">
+                                        <div className="h-40 overflow-y-auto article-shelf-scroll">
+                                            <div className="p-2 space-y-1">
+                                                {articleLoading[category] ? (
+                                                    <div className="bg-gray-100 p-3 rounded text-xs text-gray-500 text-center animate-pulse">Loading articles...</div>
+                                                ) : articleError[category] ? (
+                                                    <div className="bg-red-50 p-3 rounded text-xs text-red-600 text-center">{articleError[category]}</div>
+                                                ) : (
+                                                    articleData[category].map((article) => (
+                                                        <div
+                                                            key={article.id}
+                                                            className={`shadow-md p-3 rounded text-xs cursor-pointer hover:scale-105 transition-all duration-200 ${currentArticle?.id === article.id ? "bg-[#132A36] text-white" : "bg-gray-100 text-gray-700 hover:bg-blue-50"}`}
+                                                            title={article.title}
+                                                            draggable={true}
+                                                            onDragStart={(e) => {
+                                                                e.dataTransfer.setData("application/json", JSON.stringify(article));
+                                                                e.dataTransfer.effectAllowed = "copy";
+                                                            }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleArticleClick(article);
+                                                            }}
+                                                        >
+                                                            {article.title.length > 50 ? `${article.title.substring(0, 50)}...` : article.title}
+
+                                                            {article.is_newsletter && (
+                                                                <span className="ml-2 text-green-500">
+                                                                    (Slot {articleData[category].filter(a => a.is_newsletter).indexOf(article) + 1})
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))
+                                                )}
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
@@ -959,7 +1168,7 @@ const page = () => {
                             }}
                         >
                             <div className="bg-[#171a39] text-white text-center py-3 rounded-t-lg">
-                                <h2 className="text-base lg:text-lg font-semibold">ARTICLE FRAME</h2>
+                                <h2 className="text-base lg:text-lg font-semibold" id="article">ARTICLE FRAME</h2>
                             </div>
                             <div className="flex-1 p-4 overflow-y-auto">
                                 {saveSuccess && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm animate-slideInDown">{saveSuccess}</div>}
@@ -1119,7 +1328,7 @@ const page = () => {
                                             disabled={isDeleting || articleSaving}
                                         >
                                             <FaEye className="w-4 h-4" />
-                                            <span>View</span>
+                                            <span>View Newsletter</span>
                                         </button>
                                     </div>
                                     <div className="flex items-center space-x-2">
@@ -1177,6 +1386,7 @@ const page = () => {
                             </div>
                         </div>
                     </div>
+
                     <div className="bg-white rounded-lg border p-4 mb-4 transform hover:shadow-lg transition-all duration-300">
                         <div className="flex items-center space-x-2">
                             <Input placeholder="Ask anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyPress={handleSearchKeyPress} className="flex-1 h-10 lg:h-12 text-sm lg:text-base" disabled={isLoading} />
