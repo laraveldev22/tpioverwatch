@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import React, { RefObject } from 'react'
 import DashboardLayout from '../layout/DashboardLayout'
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Edit3, Send, Trash2 } from "lucide-react";
@@ -47,7 +47,18 @@ interface ChatMessage {
     role: "user" | "assistant"
     content: string
 }
-
+// Make the hook generic for any HTMLElement type
+function useClickOutside<T extends HTMLElement>(ref: RefObject<T>, callback: () => void) {
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (ref.current && !ref.current.contains(event.target as Node)) {
+                callback();
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [ref, callback]);
+}
 
 const page = () => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -87,6 +98,25 @@ const page = () => {
     const keyFactsRef = useRef<HTMLTextAreaElement>(null);
     const quoteBlockRef = useRef<HTMLTextAreaElement>(null);
     const ctaRef = useRef<HTMLInputElement>(null);
+
+    // Attach the click-outside handler for each editable field
+    //@ts-ignore
+    useClickOutside(titleRef, () => setIsEditingTitle(false));
+    //@ts-ignore
+    useClickOutside(bylineRef, () => setIsEditingByline(false));
+    //@ts-ignore
+    useClickOutside(leadParagraphRef, () => setIsEditingLeadParagraph(false));
+    //@ts-ignore
+    useClickOutside(contentRef, () => setIsEditingContent(false));
+    //@ts-ignore
+    //@ts-ignore
+    useClickOutside(keyFactsRef, () => setIsEditingKeyFacts(false));
+    //@ts-ignore
+    useClickOutside(quoteBlockRef, () => setIsEditingQuoteBlock(false));
+    //@ts-ignore
+    useClickOutside(ctaRef, () => setIsEditingCta(false));
+
+
     const [newsletterLoader, setnewsLetterLoader] = useState(true)
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -168,16 +198,41 @@ const page = () => {
         }
     }, [token, router, clearError]);
 
-    const handleDrop = (dropIndex: number) => {
+
+    const handleDrop = async (dropIndex: number) => {
         if (draggedIndex === null) return;
 
+        // 1. Update the local state
         const updatedList = [...newsletters];
         const [draggedItem] = updatedList.splice(draggedIndex, 1);
         updatedList.splice(dropIndex, 0, draggedItem);
 
         setNewsLetters(updatedList);
         setDraggedIndex(null);
+
+        // 2. Prepare payload for API
+        const payload = {
+            articles: updatedList.map((item, index) => ({
+                id: item.id,
+                sequence: index + 1, // Assuming sequence starts from 1
+            })),
+        };
+
+        try {
+            // 3. Call the API
+            await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/articles/reorder/`,
+                payload,
+                {
+                    headers: { Authorization: `Token ${token}` },
+                }
+            );
+            console.log("Reorder successful!");
+        } catch (error) {
+            console.error("Failed to reorder articles:", error);
+        }
     };
+
 
     const handleImageUpload = async (file: File) => {
         if (!currentArticle || !token) {

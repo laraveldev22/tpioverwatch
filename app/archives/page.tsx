@@ -33,7 +33,7 @@ const ArticlesPage = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 50;
   const router = useRouter();
 
   const fetchNewsletters = async () => {
@@ -109,7 +109,7 @@ const ArticlesPage = () => {
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase">Newsletter URL</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase">Included Articles</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase">Created</th>
-                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Updated</th>
+                
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -139,9 +139,7 @@ const ArticlesPage = () => {
                   <td className="px-6 py-4 text-sm text-gray-500 truncate">
                     {new Date(nl.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 truncate">
-                    {new Date(nl.updated_at).toLocaleDateString()}
-                  </td>
+                  
                 </tr>
               ))}
             </tbody>
