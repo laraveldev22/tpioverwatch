@@ -71,7 +71,7 @@ interface FullArticle {
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/newsletters/${slug}/with-articles/`,
-        { headers: { Authorization: `Token ${token}` } }
+       
       );
 
       // The API returns the newsletter object at root
