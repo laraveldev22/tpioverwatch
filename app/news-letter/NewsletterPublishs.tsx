@@ -32,6 +32,7 @@ interface FullArticle {
   const [editableMessage, setEditableMessage] = useState(
     "Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
   );
+  const [newsLetterNo,setNewsLetterNo]=useState("")
   const searchParams = useSearchParams();
   const slug = searchParams.get("slug"); // ✅ get slug from query
   const currentDate = new Date();
@@ -97,6 +98,7 @@ interface FullArticle {
       setEditableTitle(newsletter.title)
       setEditableMessageTitle(newsletter.message)
       setEditableMessage(newsletter.message_description)
+      setNewsLetterNo(newsletter.newsletter_no)
     } catch (error: any) {
       console.error("Error fetching articles:", error?.response?.data || error.message);
       setPublishedArticles([]);
@@ -142,7 +144,7 @@ interface FullArticle {
           </div>
          <div className="flex flex-col items-end">
             <span className="text-2xl font-bold">{currentDateFormatted}</span>
-            <span className="text-lg mt-3 font-medium text-gray-300 capitalize">{slug}</span>
+            <span className="text-lg mt-3 font-medium text-gray-300 uppercase">{newsLetterNo}</span>
           </div>
         </header>
 
@@ -184,7 +186,7 @@ interface FullArticle {
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
                     </svg>
-                    <span className="text-lg text-gray-800">{article.title}</span>
+                    <span className="text-lg text-gray-800  ">{article.title}</span>
                   </li>
                 ))}
                 {articleIds.length < 3 &&

@@ -15,9 +15,15 @@ interface Article {
     created_at: string;
     updated_at: string;
 }
-
+const articleCategories = {
+    A: "Feature Story",
+    B: "Data/Report Summary",
+    C: "Events & Commemoration",
+    D: "Historical or Cultural Insight",
+}
 const ArticlesPage = () => {
     const [articles, setArticles] = useState<Article[]>([]);
+    console.log(articles,)
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -34,11 +40,11 @@ const ArticlesPage = () => {
             return;
         }
         try {
-            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/articles/`, {
+            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/articles/latest/`, {
                 headers: { Authorization: `Token ${token}` },
             });
             console.log(response, "response")
-            setArticles(response?.data?.results?.results);
+            setArticles(response?.data?.results);
         } catch (error) {
             console.error("Error fetching articles:", error);
         } finally {
@@ -115,7 +121,9 @@ const ArticlesPage = () => {
                                     className="hover:bg-[#fef3c7] transition-colors duration-200 cursor-pointer"
                                 >
                                     <td className="px-6 py-4 text-sm text-gray-700 truncate">{article.title}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 truncate">{article.category}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 truncate">
+                                        {articleCategories[article.category as keyof typeof articleCategories] || article.category}
+                                    </td>
                                     <td className="px-6 py-4 text-sm">
                                         <span
                                             className={`px-2 py-1 rounded-full text-white font-semibold text-xs ${article.is_newsletter ? "bg-green-500" : "bg-yellow-500"

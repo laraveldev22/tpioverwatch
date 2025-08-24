@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic } from "react-icons/fa";
 import { Loader2, RefreshCw } from "lucide-react";
 import Image from "next/image";
@@ -9,11 +9,13 @@ import { useRouter } from 'nextjs-toploader/app';
 import Cookies from "js-cookie";
 import { FaRegNewspaper } from "react-icons/fa";
 import axios from "axios";
+import { ImSpinner2 } from "react-icons/im";
 
 
 interface DashboardLayoutProps {
   children?: ReactNode;
-  getPrompts?: (value: string) => void
+  getPrompts?: (value: string) => void,
+  refetch?: number
 }
 
 interface ConversationTitle {
@@ -22,11 +24,10 @@ interface ConversationTitle {
   created_at: string;
 }
 
-export default function DashboardLayout({ children, getPrompts }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, getPrompts, refetch }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const route = useRouter()
   const pathname = usePathname();
-
   // Mock data
   const [sources, setSources] = useState([
     {
@@ -50,6 +51,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
       endpoint: `/scrapers/tpe/run/`,
     },
   ]);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const [conversationLoading, setConversationLoading] = useState(false);
   const [sourceLoading, setSourceLoading] = useState<{ [key: string]: boolean }>({
@@ -58,7 +60,7 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
     "Repatriation Medical Authority (RMA)": false,
     "The Pineapple Express (TPE)": false,
   });
-
+  const menuRef = useRef(null);
   const [conversationTitles, setConversationTitles] = useState<ConversationTitle[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [conversationError, setConversationError] = useState<string | null>(null);
@@ -162,10 +164,11 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
 
 
   const fetchConversationTitles = async () => {
+    setConversationLoading(true);
+
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    setConversationLoading(true);
     setConversationError(null);
 
     try {
@@ -203,7 +206,18 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
         console.error("Error parsing user data:", err);
       }
     }
+    console.log("runing")
     fetchConversationTitles();
+  }, [refetch]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !(menuRef.current as HTMLElement).contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -276,43 +290,51 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
           </div>
 
           {/* Conversations */}
+
           <div>
             <p className="text-sm font-semibold text-gray-300 mb-3">Article Threads</p>
-            <div className="space-y-2">
-              {[...new Map(conversationTitles.map((c) => [c.title, c])).values()].map(
-                (c) => {
-                  // short name function
-                  const shortName =
-                    c.title.length > 25 ? c.title.substring(0, 25) + "..." : c.title;
 
-                  return (
-                    <div
-                      key={c.id}
-                      className="flex items-center justify-between p-3 bg-[#1f234b] rounded-lg cursor-pointer 
-              hover:bg-[#24294f] hover:scale-105 transition-all duration-200 ease-in-out
-              border-l-4 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg group"
-                      title={c.title} // full title on hover
-                    >
-                      <p className="text-sm text-gray-200 font-medium">{shortName}</p>
-                      <div className="flex items-center gap-2">
-                        {/* Optional icon */}
-                        <svg
-                          className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M6 2a1 1 0 00-1 1v14l6-4 6 4V3a1 1 0 00-1-1H6z" />
-                        </svg>
-                        <span className="text-xs text-gray-400">
-                          {/* e.g. date/time */}
-                        </span>
+            {conversationLoading ? ( // <-- add a loading state check
+              <div className="flex justify-center items-center py-10">
+                <ImSpinner2 className="animate-spin w-6 h-6 text-blue-400" />
+                <span className="ml-2 text-gray-300 text-sm">Loading...</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...new Map(conversationTitles.map((c) => [c.title, c])).values()].map(
+                  (c) => {
+                    const shortName =
+                      c.title.length > 25 ? c.title.substring(0, 25) + "..." : c.title;
+
+                    return (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between p-3 bg-[#1f234b] rounded-lg cursor-pointer 
+                hover:bg-[#24294f] hover:scale-105 transition-all duration-200 ease-in-out
+                border-l-4 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg group"
+                        title={c.title}
+                      >
+                        <p className="text-sm text-gray-200 font-medium">{shortName}</p>
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M6 2a1 1 0 00-1 1v14l6-4 6 4V3a1 1 0 00-1-1H6z" />
+                          </svg>
+                          <span className="text-xs text-gray-400">
+                            {/* e.g. date/time */}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                }
-              )}
-            </div>
+                    );
+                  }
+                )}
+              </div>
+            )}
           </div>
+
 
 
 
@@ -394,14 +416,47 @@ export default function DashboardLayout({ children, getPrompts }: DashboardLayou
             >
               <FaBars size={24} />
             </button>
-            <h1 className="text-xl font-semibold capitalize">
-              {pathname.replace("/dashboard", "").replace("/", "") || "Home"}
-            </h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span>{userData?.username}</span>
-            <FaUserCircle size={24} />
+            <h1 className="text-xl font-semibold">
+              {(() => {
+                const title =
+                  pathname
+                    .replace("/dashboard", "")
+                    .replace("/", "")
+                    .replace(/-/g, " ") || "Home";
 
+                return title.charAt(0).toUpperCase() + title.slice(1).toLowerCase();
+              })()}
+            </h1>
+
+
+          </div>
+
+          <div className="relative flex items-center space-x-4" ref={menuRef}>
+            <span>{userData?.username}</span>
+
+            {/* Profile Icon */}
+            <button
+              title="sad"
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              className="relative text-gray-700 focus:outline-none"
+            >
+              <FaUserCircle size={28} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {profileMenuOpen && (
+              <div className="absolute -right-2 mt-2 w-40 bg-white border rounded-md shadow-lg top-8 z-50">
+                {/* Arrow */}
+                <div className="absolute -top-2 right-3 w-4 h-4 bg-white border-l border-t rotate-45"></div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </header>
 

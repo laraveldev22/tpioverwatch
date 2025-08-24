@@ -1,4 +1,4 @@
- 
+
 import React from "react";
 import {
   Document,
@@ -9,6 +9,7 @@ import {
   Image,
   Link,
 } from "@react-pdf/renderer";
+const nobreakHyphens = (s = "") => s.replace(/-/g, "\u2011");
 
 export interface ArticlePDFProps {
   editedTitle: string;
@@ -49,6 +50,7 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 12,
     lineHeight: 1.2,
+    
   },
   byline: {
     fontSize: 11,
@@ -156,7 +158,7 @@ const ArticlePDF: React.FC<ArticlePDFProps> = ({
           {currentArticle?.image_url && currentArticle.image_url.trim() !== "" && (
             <Image src={currentArticle.image_url} style={styles.image} />
           )}
-          <Text style={styles.title}>{editedTitle}</Text>
+          <Text style={styles.title}  >{nobreakHyphens(editedTitle)}</Text>
           <Text style={styles.byline}>{editedByline}</Text>
           <Text style={styles.lead}>{editedLeadParagraph}</Text>
 

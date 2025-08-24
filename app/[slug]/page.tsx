@@ -212,10 +212,21 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   };
 
   // If you want it to generate dynamically based on some logic:
-  useEffect(() => {
-    const code = `VO${new Date().getFullYear()}W${Math.floor(Math.random() * 10000)}`;
-    setDynamicCode(code);
-  }, []);
+useEffect(() => {
+  const getWeekNumber = (date: Date) => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDays = Math.floor(
+      (date.getTime() - firstDayOfYear.getTime()) / 86400000
+    );
+    return Math.ceil((pastDays + firstDayOfYear.getDay() + 1) / 7);
+  };
+
+  const now = new Date();
+  const weekNumber = getWeekNumber(now);
+
+  const code = `VO${now.getFullYear()}W${weekNumber}`;
+  setDynamicCode(code);
+}, []);
   useEffect(() => {
     if (slug !== expectedSlug) {
       router.replace(`/${expectedSlug}`);
@@ -326,7 +337,6 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
           <div className="flex flex-col items-end">
             <span className="text-2xl font-bold">{currentDateFormatted}</span>
-            <span className="text-lg mt-3 font-medium text-gray-300">{dynamicCode}</span>
           </div>
         </header>
 

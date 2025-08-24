@@ -99,6 +99,8 @@ const page = () => {
     const keyFactsRef = useRef<HTMLTextAreaElement>(null);
     const quoteBlockRef = useRef<HTMLTextAreaElement>(null);
     const ctaRef = useRef<HTMLInputElement>(null);
+    const [refetch, setRefetch] = useState(0)
+    console.log(refetch, "refetchsss")
 
     // Attach the click-outside handler for each editable field
     //@ts-ignore
@@ -728,6 +730,7 @@ const page = () => {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             const data = await response.json();
+            setRefetch(prev => prev + 1);
             const assistantMessage: ChatMessage = { role: "assistant", content: data.option1.response };
             setChatHistory((prev) => [...prev.slice(-MAX_CHAT_HISTORY + 1), assistantMessage]);
             setSearchQuery("");
@@ -765,7 +768,7 @@ const page = () => {
                 setCurrentArticle(newArticle);
                 setSelectedCategory(newArticle.category || "A");
                 fetchArticles();
-            }
+             }
         } catch (err) {
             console.error("Search error:", err);
             setError(`Search failed: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -1016,7 +1019,7 @@ const page = () => {
     }, [router]);
 
     return (
-        <DashboardLayout getPrompts={setSearchQuery}>
+        <DashboardLayout getPrompts={setSearchQuery} refetch={refetch}>
             <div className="flex-1 flex flex-col">
                 <main className="flex-1 p-3 lg:p-5 space-y-4 lg:space-y-6">
                     <div className="bg-white shadow-lg border border-gray-100 rounded-lg transform hover:shadow-xl transition-all duration-300">
