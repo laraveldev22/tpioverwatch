@@ -10,6 +10,7 @@ import Cookies from "js-cookie";
 import { FaRegNewspaper } from "react-icons/fa";
 import axios from "axios";
 import { ImSpinner2 } from "react-icons/im";
+import { CgSpinner } from "react-icons/cg";
 
 
 interface DashboardLayoutProps {
@@ -17,7 +18,11 @@ interface DashboardLayoutProps {
   getPrompts?: (value: string) => void,
   refetch?: number
 }
-
+interface SourceStatus {
+  source_key: string;
+  source_name: string;
+  last_synced_at: string; // ISO date string (e.g., "2025-08-24T11:32:57Z")
+}
 interface ConversationTitle {
   id: string;
   title: string;
@@ -28,30 +33,9 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const route = useRouter()
   const pathname = usePathname();
-  // Mock data
-  const [sources, setSources] = useState([
-    {
-      name: "Department of Veteran Affairs (DVA)",
-      time: "07-08-2025 13:50",
-      endpoint: `/scrapers/dva/run/`,
-    },
-    {
-      name: "Australian War Memorial (AWM)",
-      time: "07-08-2025 13:50",
-      endpoint: `/scrapers/awm/run/`,
-    },
-    {
-      name: "Repatriation Medical Authority (RMA)",
-      time: "07-08-2025 13:50",
-      endpoint: `/scrapers/rma/run/`,
-    },
-    {
-      name: "The Pineapple Express (TPE)",
-      time: "07-08-2025 13:50",
-      endpoint: `/scrapers/tpe/run/`,
-    },
-  ]);
+
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [status, setStatus] = useState<SourceStatus[] | null>(null);
 
   const [conversationLoading, setConversationLoading] = useState(false);
   const [sourceLoading, setSourceLoading] = useState<{ [key: string]: boolean }>({
@@ -64,7 +48,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   const [conversationTitles, setConversationTitles] = useState<ConversationTitle[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [conversationError, setConversationError] = useState<string | null>(null);
-
+  const [fetchSourceStatusLoader, setFetchSourceStatusLoader] = useState(false)
   // Menu configuration
   const menuItems = [
     { name: "Home", icon: <FaHome />, path: "/dashboard" },
@@ -81,7 +65,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
     setSourceLoading((prev) => ({ ...prev, [sourceName]: true }));
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scrapers/${endpoint.toLowerCase()}/run/`, {
         method: "POST",
         headers: {
           Authorization: `Token ${token}`,
@@ -110,13 +94,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           minute: "2-digit",
           hour12: false,
         });
-        setSources((prev) => {
-          const updatedSources = prev.map((source) =>
-            source.name === sourceName ? { ...source, time: formattedTime } : source
-          );
-          localStorage.setItem("syncedSources", JSON.stringify(updatedSources));
-          return updatedSources;
-        });
+
         setSourceLoading((prev) => ({ ...prev, [sourceName]: false }));
       }
     } catch (err) {
@@ -136,6 +114,26 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   };
   const [loading, setLoading] = useState(false);
 
+  const fetchSourceStatus = async () => {
+    setFetchSourceStatusLoader(true)
+    const token = localStorage.getItem("token");
+    try {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/sources/status`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+      });
+      console.log(res.data, "res.data")
+      setStatus(res.data.sources);
+    } catch (err: any) {
+      console.error("Error fetching source status:", err.response?.data || err.message);
+    } finally {
+      setFetchSourceStatusLoader(false)
+
+    }
+  };
+
   // Auto-generate API call
   const handleAutoGenerate = async () => {
     setLoading(true);
@@ -143,7 +141,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
 
     try {
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/auto-generate/article/1/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/auto-generate/article/3/`,
         {},
         {
           headers: {
@@ -211,6 +209,10 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   }, [refetch]);
 
   useEffect(() => {
+    fetchSourceStatus();
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !(menuRef.current as HTMLElement).contains(event.target as Node)) {
         setProfileMenuOpen(false);
@@ -220,8 +222,10 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+
+
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 overflow-hidden relative">
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 bg-[#171a39] text-white shadow-lg transform transition-transform duration-300 ease-in-out
@@ -259,40 +263,54 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           <div>
             <p className="text-sm font-semibold text-gray-200 mb-2">Sources</p>
             <div className="space-y-2">
-              {sources.map((source, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-2 bg-[#1f234b] rounded hover:bg-[#24294f]"
-                >
-                  <div>
-                    <p className="text-xs font-medium">{source.name}</p>
-                    <p className="text-xs text-gray-400">
-                      Last Sync: {source.time}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleSyncClick(source.name, source.endpoint)}
-                    disabled={sourceLoading[source.name]}
-                    className={`w-7 h-7 flex items-center justify-center rounded ${sourceLoading[source.name]
-                      ? "bg-blue-200"
-                      : "bg-[#004682] hover:bg-[#003366]"
-                      }`}
+              {fetchSourceStatusLoader ?
+                <div className="flex justify-center items-center py-10">
+                  <ImSpinner2 className="animate-spin w-6 h-6 text-blue-400" />
+                  <span className="ml-2 text-gray-300 text-sm">Loading...</span>
+                </div> : <>    {status?.map((source, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-[#1f234b] rounded hover:bg-[#24294f]"
                   >
-                    {sourceLoading[source.name] ? (
-                      <Loader2 className="w-4 h-4 text-white animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 text-white" />
-                    )}
-                  </button>
-                </div>
-              ))}
+                    <div>
+                      <p className="text-xs font-medium">{source.source_name}</p>
+                      <p className="text-xs text-gray-400">
+                        Last Sync: {new Date(source.last_synced_at).toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+
+                    </div>
+                    <button
+                      onClick={() => handleSyncClick(source.source_name, source.source_key)}
+                      disabled={sourceLoading[source.source_name]}
+                      className={`w-7 h-7 flex items-center justify-center rounded ${sourceLoading[source.source_name]
+                        ? "bg-blue-200"
+                        : "bg-[#004682] hover:bg-[#003366]"
+                        }`}
+                    >
+                      {sourceLoading[source.source_name] ? (
+                        <Loader2 className="w-4 h-4 text-white animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 text-white" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+                </>
+              }
+
             </div>
           </div>
 
           {/* Conversations */}
 
           <div>
-            <p className="text-sm font-semibold text-gray-300 mb-3">Article Threads</p>
+            <p className="text-sm font-semibold text-gray-300 mb-3"> Recent Prompts</p>
 
             {conversationLoading ? ( // <-- add a loading state check
               <div className="flex justify-center items-center py-10">
@@ -309,6 +327,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
                     return (
                       <div
                         key={c.id}
+                        onClick={() => getPrompts && getPrompts(shortName)}
                         className="flex items-center justify-between p-3 bg-[#1f234b] rounded-lg cursor-pointer 
                 hover:bg-[#24294f] hover:scale-105 transition-all duration-200 ease-in-out
                 border-l-4 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg group"
@@ -465,6 +484,18 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           {children}
         </main>
       </div>
+      {
+        loading && <div
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center
+            bg-black/40 backdrop-blur-md"
+        >
+          <CgSpinner className="animate-spin text-white text-6xl mb-4" />
+          <p className="text-lg font-medium text-white drop-shadow">
+            Generating Articles...
+          </p>
+        </div>
+      }
+
     </div>
   );
 }

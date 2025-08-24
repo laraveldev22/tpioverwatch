@@ -1,14 +1,14 @@
 "use client";
 import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { Mail, Phone, Shield, Globe } from 'lucide-react';
+import { Mail, Phone, Shield, Globe, Printer } from 'lucide-react';
 import axios from 'axios';
 import { FaFilePdf } from 'react-icons/fa';
 import { MdPublishedWithChanges } from "react-icons/md";
 import { ImSpinner2 } from "react-icons/im";
 import { IoMdAdd, IoMdClose } from "react-icons/io";
 import toast from 'react-hot-toast';
-
+import { useRouter } from 'next/navigation';
+ 
 interface FullArticle {
   id: string;
   title: string;
@@ -48,6 +48,8 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   const [isEditing, setIsEditing] = useState(false);
   const [isAdhoc, setIsAdhoc] = useState(false)
   const [dynamicCode, setDynamicCode] = useState("");
+  const [showPublishOptions, setShowPublishOptions] = useState(false);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
 
   const [editableTitle, setEditableTitle] = useState("TPI Newsletter");
   const [editableMessageTitle, setEditableMessageTitle] = useState("Editor's Message");
@@ -93,6 +95,13 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
       console.error("Base64 conversion failed:", err);
       return ""; // fallback to empty string if image fails
     }
+  };
+  const togglePlatform = (platform: string) => {
+    setSelectedPlatforms((prev) =>
+      prev.includes(platform)
+        ? prev.filter((p) => p !== platform) // remove if already selected
+        : [...prev, platform] // add if not selected
+    );
   };
 
   const currentDateFormatted = currentDate.toLocaleDateString("en-AU", {
@@ -194,16 +203,16 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
         ad_hoc: isAdhoc,
         articles: articleIds, // use all stored IDs
         message: editableMessageTitle,
-        message_description: editableMessage
+        message_description: editableMessage,
+        is_mail_send: selectedPlatforms.includes("mailchimp"),
       };
 
-      await axios.post(
+ const res=     await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/newsletters/publish/`,
         payload,
         { headers: { Authorization: `Token ${token}` } }
       );
-
-      router.push("/dashboard")
+       router.push(`/news-letter?slug=${res.data.newsletter.slug}`)
     } catch (error: any) {
       toast.error(error.response.data.error)
     } finally {
@@ -212,21 +221,21 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   };
 
   // If you want it to generate dynamically based on some logic:
-useEffect(() => {
-  const getWeekNumber = (date: Date) => {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDays = Math.floor(
-      (date.getTime() - firstDayOfYear.getTime()) / 86400000
-    );
-    return Math.ceil((pastDays + firstDayOfYear.getDay() + 1) / 7);
-  };
+  useEffect(() => {
+    const getWeekNumber = (date: Date) => {
+      const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+      const pastDays = Math.floor(
+        (date.getTime() - firstDayOfYear.getTime()) / 86400000
+      );
+      return Math.ceil((pastDays + firstDayOfYear.getDay() + 1) / 7);
+    };
 
-  const now = new Date();
-  const weekNumber = getWeekNumber(now);
+    const now = new Date();
+    const weekNumber = getWeekNumber(now);
 
-  const code = `VO${now.getFullYear()}W${weekNumber}`;
-  setDynamicCode(code);
-}, []);
+    const code = `VO${now.getFullYear()}W${weekNumber}`;
+    setDynamicCode(code);
+  }, []);
   useEffect(() => {
     if (slug !== expectedSlug) {
       router.replace(`/${expectedSlug}`);
@@ -270,297 +279,401 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto flex justify-between items-center mb-4">
-        {/* Left side: checkbox + label */}
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isAdhoc}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setIsEditing(checked);
+    <>
+      <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center mb-4">
+          {/* Left side: checkbox + label */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isAdhoc}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setIsEditing(checked);
 
-              if (checked) {
-                // ✅ Enable adhoc
-                setIsAdhoc(true);
-              } else {
+                if (checked) {
+                  // ✅ Enable adhoc
+                  setIsAdhoc(true);
+                } else {
 
-                setIsAdhoc(false);
-                setEditableTitle("TPI Newsletter")
-                setEditableMessageTitle("Editor's Message")
-                setEditableMessage("Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
-                )
+                  setIsAdhoc(false);
+                  setEditableTitle("TPI Newsletter")
+                  setEditableMessageTitle("Editor's Message")
+                  setEditableMessage("Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
+                  )
 
-              }
-            }}
-            className="w-5 h-5 accent-blue-600 rounded"
-          />
-          <span className="font-medium transition text-blue-600">
-            Special Newsletter
-          </span>
+                }
+              }}
+              className="w-5 h-5 accent-blue-600 rounded"
+            />
+            <span className="font-medium transition text-blue-600">
+              Special Newsletter
+            </span>
 
-        </label>
+          </label>
 
-        {/* Right side: Save button */}
-        {
-          isAdhoc && <button
-            onClick={() => setIsEditing(false)}
-            className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg shadow hover:bg-green-700 transition"
-          >
-            Save
-          </button>
-        }
+          {/* Right side: Save button */}
+          {
+            isAdhoc && <button
+              onClick={() => setIsEditing(false)}
+              className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg shadow hover:bg-green-700 transition"
+            >
+              Save
+            </button>
+          }
 
-      </div>
-
-
-
-      <div className="max-w-7xl mx-auto bg-white border-1 border-blue-900 shadow-xl">
-
-        <header className="bg-[#171a39] text-white px-6 py-8 pb-11 flex justify-between rounded-lg items-center">
-          <img src="/mainLogo.png" alt="Logo" className="h-24" />
-
-          <div className="flex-1 text-center">
-            {isEditing ? (
-              <input
-                title="ss"
-                type="text"
-                value={editableTitle}
-                onChange={(e) => setEditableTitle(e.target.value)}
-                className="text-5xl font-bold text-center font-serif rounded-md p-2 text-black"
-              />
-            ) : (
-              <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
-            )}
-          </div>
-
-          <div className="flex flex-col items-end">
-            <span className="text-2xl font-bold">{currentDateFormatted}</span>
-          </div>
-        </header>
+        </div>
 
 
-        <div className="p-6">
-          <section className="mb-8 p-0 rounded-lg">
-            {/* Editable Heading */}
-            {isEditingTitle ? (
-              <input
-                title='text'
-                type="text"
-                value={editableMessageTitle}
-                onChange={(e) => setEditableMessageTitle(e.target.value)}
-                onBlur={() => setIsEditingTitle(false)} // close input on blur
-                autoFocus
-                className="text-2xl font-bold mb-4 text-gray-800 w-full rounded-md p-2 border border-gray-300"
-              />
-            ) : (
-              <h2
-                className="text-2xl font-bold mb-4 text-gray-800 cursor-text"
-                onClick={() => setIsEditingTitle(true)}
-                title="Click to edit"
-              >
-                {editableMessageTitle}
-              </h2>
-            )}
 
-            {/* Editable Message */}
-            {isEditingMessage ? (
-              <textarea
-                title='text'
-                value={editableMessage}
-                onChange={(e) => setEditableMessage(e.target.value)}
-                onBlur={() => setIsEditingMessage(false)} // close textarea on blur
-                autoFocus
-                rows={5}
-                className="text-lg text-gray-700 leading-relaxed w-full rounded-md p-3 border border-gray-300"
-              />
-            ) : (
-              <p
-                className="text-lg text-gray-700 leading-relaxed cursor-text"
-                onClick={() => setIsEditingMessage(true)}
-                title="Click to edit"
-              >
-                {editableMessage}
-              </p>
-            )}
-          </section>
+        <div className="max-w-7xl mx-auto bg-white border-1 border-blue-900 shadow-xl">
 
+          <header className="bg-[#171a39] text-white px-6 py-8 pb-11 flex justify-between rounded-lg items-center">
+            <img src="/mainLogo.png" alt="Logo" className="h-24" />
 
-          <hr className="border-t-2 border-gray-300 mb-8" />
-
-          {/* Issue at a glance */}
-          <section className="mb-8">
-            <div className="bg-[#171a39] text-white px-3 py-3 rounded-lg w-fit">
-              <h2 className="text-2xl font-bold">This Issue at a Glance</h2>
+            <div className="flex-1 text-center">
+              {isEditing ? (
+                <input
+                  title="ss"
+                  type="text"
+                  value={editableTitle}
+                  onChange={(e) => setEditableTitle(e.target.value)}
+                  className="text-5xl font-bold text-center font-serif rounded-md p-2 text-black"
+                />
+              ) : (
+                <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
+              )}
             </div>
-            <div className="bg-blue-50 p-6 mt-3 rounded-lg">
-              <ul className="space-y-3">
-                {publishedArticles.map((article) => (
-                  <li key={article.id} className="flex items-center">
-                    <svg
-                      className="w-5 h-4 mr-3 flex-shrink-0 transform rotate-45 align-middle"
-                      fill="none"
-                      stroke="#132A36"
-                      viewBox="0 0 8 8"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
-                    </svg>
-                    <span className="text-lg text-gray-800">{article.title}</span>
-                  </li>
-                ))}
-                {articleIds.length < 3 &&
-                  Array.from({ length: 3 - articleIds.length }).map((_, index) => (
-                    <li key={`empty-${index}`} className="flex items-center">
+
+            <div className="flex flex-col items-end">
+              <span className="text-2xl font-bold">{currentDateFormatted}</span>
+            </div>
+          </header>
+
+
+          <div className="p-6">
+            <section className="mb-8 p-0 rounded-lg">
+              {/* Editable Heading */}
+              {isEditingTitle ? (
+                <input
+                  title='text'
+                  type="text"
+                  value={editableMessageTitle}
+                  onChange={(e) => setEditableMessageTitle(e.target.value)}
+                  onBlur={() => setIsEditingTitle(false)} // close input on blur
+                  autoFocus
+                  className="text-2xl font-bold mb-4 text-gray-800 w-full rounded-md p-2 border border-gray-300"
+                />
+              ) : (
+                <h2
+                  className="text-2xl font-bold mb-4 text-gray-800 cursor-text"
+                  onClick={() => setIsEditingTitle(true)}
+                  title="Click to edit"
+                >
+                  {editableMessageTitle}
+                </h2>
+              )}
+
+              {/* Editable Message */}
+              {isEditingMessage ? (
+                <textarea
+                  title='text'
+                  value={editableMessage}
+                  onChange={(e) => setEditableMessage(e.target.value)}
+                  onBlur={() => setIsEditingMessage(false)} // close textarea on blur
+                  autoFocus
+                  rows={5}
+                  className="text-lg text-gray-700 leading-relaxed w-full rounded-md p-3 border border-gray-300"
+                />
+              ) : (
+                <p
+                  className="text-lg text-gray-700 leading-relaxed cursor-text"
+                  onClick={() => setIsEditingMessage(true)}
+                  title="Click to edit"
+                >
+                  {editableMessage}
+                </p>
+              )}
+            </section>
+
+
+            <hr className="border-t-2 border-gray-300 mb-8" />
+
+            {/* Issue at a glance */}
+            <section className="mb-8">
+              <div className="bg-[#171a39] text-white px-3 py-3 rounded-lg w-fit">
+                <h2 className="text-2xl font-bold">This Issue at a Glance</h2>
+              </div>
+              <div className="bg-blue-50 p-6 mt-3 rounded-lg">
+                <ul className="space-y-3">
+                  {publishedArticles.map((article) => (
+                    <li key={article.id} className="flex items-center">
                       <svg
                         className="w-5 h-4 mr-3 flex-shrink-0 transform rotate-45 align-middle"
                         fill="none"
-                        stroke="#A0AEC0"
+                        stroke="#132A36"
                         viewBox="0 0 8 8"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
                       </svg>
-                      <span className="text-lg text-gray-500">Article Slot {articleIds.length + index + 1}: Empty</span>
+                      <span className="text-lg text-gray-800">{article.title}</span>
                     </li>
                   ))}
-              </ul>
-            </div>
-          </section>
-
-          <hr className="border-t-2 border-gray-300 mb-8" />
-
-          {/* Articles */}
-          <div className="max-w-7xl mx-auto">
-            {publishedArticles.map((article) => (
-              <div key={article.id} className="mb-12">
-                <div className="mb-4">
-                  <h2 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight">{article.title}</h2>
-                </div>
-
-                {article.image_url && (
-                  <div className="mb-6 relative">
-                    <img src={article.image_url} alt={`Article ${article.id} Hero`} className="w-full h-56 object-cover rounded-lg shadow-md" />
-                  </div>
-                )}
-
-                <div className="mb-6">
-                  <p className="text-gray-600 italic">{article.byline}</p>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-lg font-bold text-gray-800 leading-relaxed">{article.lead_paragraph}</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 text-justify">
-                    <div className="text-gray-700 leading-relaxed whitespace-pre-wrap mb-6">{article.content}</div>
-                  </div>
-                  <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-gray-100 shadow-md rounded-lg border border-gray-200 overflow-hidden">
-                      <div className="bg-gray-200 px-4 py-3 border-b border-gray-200">
-                        <h3 className="font-bold text-gray-800">Key Facts</h3>
-                      </div>
-                      <div className="p-4">
-                        {formatKeyFacts(article.key_facts).length > 0 ? (
-                          <ul className="space-y-2 list-disc pl-5">
-                            {formatKeyFacts(article.key_facts).map((fact, idx) => (
-                              <li key={idx} className="text-sm text-gray-700 leading-relaxed">{fact}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm text-gray-500">No key facts available.</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-                      <div className="p-4">
-                        <blockquote className="text-sm italic text-gray-700 relative">
-                          <span className="text-3xl text-[#004682] absolute -top-2 -left-1">"</span>
-                          <span className="pl-6 block">{article.quote_block}</span>
-                          <span className="text-3xl text-[#004682] absolute -bottom-2 -right-1">"</span>
-                        </blockquote>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                    <div className="flex items-center space-x-4">
-                      <span>Topic: {article.tags}</span>
-                      <span>
-                        {article.created_at
-                          ? new Date(article.created_at).toLocaleDateString("en-AU", { year: "numeric", month: "2-digit", day: "2-digit" })
-                          : new Date().toLocaleDateString("en-AU", { year: "numeric", month: "2-digit", day: "2-digit" })}
-                      </span>
-                      <span>Source: TPI News</span>
-                    </div>
-                    <div>
-                      <a href={article.cta} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                        {article.cta}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                <hr className="border-t-2 border-gray-300 mt-8" />
+                  {articleIds.length < 3 &&
+                    Array.from({ length: 3 - articleIds.length }).map((_, index) => (
+                      <li key={`empty-${index}`} className="flex items-center">
+                        <svg
+                          className="w-5 h-4 mr-3 flex-shrink-0 transform rotate-45 align-middle"
+                          fill="none"
+                          stroke="#A0AEC0"
+                          viewBox="0 0 8 8"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
+                        </svg>
+                        <span className="text-lg text-gray-500">Article Slot {articleIds.length + index + 1}: Empty</span>
+                      </li>
+                    ))}
+                </ul>
               </div>
-            ))}
+            </section>
 
-            <div className="bg-[#171a39] text-white p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-5 w-5" />
-                  <span className="font-bold">Veteran Support Line</span>
+            <hr className="border-t-2 border-gray-300 mb-8" />
+
+            {/* Articles */}
+            <div className="max-w-7xl mx-auto">
+              {publishedArticles.map((article) => (
+                <div key={article.id} className="mb-12">
+                  <div className="mb-4">
+                    <h2 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight">{article.title}</h2>
+                  </div>
+
+                  {article.image_url && (
+                    <div className="mb-6 relative">
+                      <img src={article.image_url} alt={`Article ${article.id} Hero`} className="w-full h-56 object-cover rounded-lg shadow-md" />
+                    </div>
+                  )}
+
+                  <div className="mb-6">
+                    <p className="text-gray-600 italic">{article.byline}</p>
+                  </div>
+
+                  <div className="mb-6">
+                    <p className="text-lg font-bold text-gray-800 leading-relaxed">{article.lead_paragraph}</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 text-justify">
+                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap mb-6">{article.content}</div>
+                    </div>
+                    <div className="lg:col-span-1 space-y-6">
+                      <div className="bg-gray-100 shadow-md rounded-lg border border-gray-200 overflow-hidden">
+                        <div className="bg-gray-200 px-4 py-3 border-b border-gray-200">
+                          <h3 className="font-bold text-gray-800">Key Facts</h3>
+                        </div>
+                        <div className="p-4">
+                          {formatKeyFacts(article.key_facts).length > 0 ? (
+                            <ul className="space-y-2 list-disc pl-5">
+                              {formatKeyFacts(article.key_facts).map((fact, idx) => (
+                                <li key={idx} className="text-sm text-gray-700 leading-relaxed">{fact}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-500">No key facts available.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                        <div className="p-4">
+                          <blockquote className="text-sm italic text-gray-700 relative">
+                            <span className="text-3xl text-[#004682] absolute -top-2 -left-1">"</span>
+                            <span className="pl-6 block">{article.quote_block}</span>
+                            <span className="text-3xl text-[#004682] absolute -bottom-2 -right-1">"</span>
+                          </blockquote>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                      <div className="flex items-center space-x-4">
+                        <span>Topic: {article.tags}</span>
+                        <span>
+                          {article.created_at
+                            ? new Date(article.created_at).toLocaleDateString("en-AU", { year: "numeric", month: "2-digit", day: "2-digit" })
+                            : new Date().toLocaleDateString("en-AU", { year: "numeric", month: "2-digit", day: "2-digit" })}
+                        </span>
+                        <span>Source: TPI News</span>
+                      </div>
+                      <div>
+                        <a href={article.cta} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {article.cta}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr className="border-t-2 border-gray-300 mt-8" />
                 </div>
-                <p>National Veterans Helpline</p>
-                <p>171 Richmond Rd, Richmond SA 5033</p>
-                <p className="flex items-center space-x-2">
-                  <Phone className="h-5 w-5" />
-                  <span>Freecall: 1800 VET HELP (08 8351 8140)</span>
-                </p>
-                <p className="flex items-center space-x-2">
-                  <Mail className="h-5 w-5" />
-                  <span>Email: office@tpi-sa.com.au</span>
-                </p>
-                <p className="flex items-center space-x-2">
-                  <Globe className="h-5 w-5" />
-                  <span>Website: https://tpi-sa.com.au</span>
-                </p>
+              ))}
+
+              <div className="bg-[#171a39] text-white p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
+
+                <div className="space-y-2">
+                  
+                  <p className='text-lg'>Veterans Overwatch</p>
+                  <p>171 Richmond Rd, Richmond SA 5033</p>
+
+                  <p className="flex items-center space-x-2">
+                    <Phone className="h-5 w-5 text-white" />
+                    <span>Phone: (08) 8351 8140</span>
+                  </p>
+
+                  <p className="flex items-center space-x-2">
+                    <Printer className="h-5 w-5 text-white" />
+                    <span>Fax: (08) 8351 7781</span>
+                  </p>
+
+                  <p className="flex items-center space-x-2">
+                    <Mail className="h-5 w-5 text-white" />
+                    <span>Email: office@tpi-sa.com.au</span>
+                  </p>
+
+                  <p className="flex items-center space-x-2">
+                    <Globe className="h-5 w-5 text-white" />
+                    <a
+                      href="https://tpi-sa.com.au"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white undefined hover:underline"
+                    >
+                      Website: https://tpi-sa.com.au
+                    </a>
+                  </p>
+                </div>
+
+                <img src="/mainLogo.png" alt="Logo" className="h-24 mt-4 md:mt-0" />
               </div>
-              <img src="/mainLogo.png" alt="Logo" className="h-24 mt-4 md:mt-0" />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Floating Actions */}
-      <div className="fixed bottom-5 right-5 flex flex-col items-end gap-3">
-        {open && (
-          <div className="flex flex-col gap-3 mb-2 animate-slide-up">
+        {/* Floating Actions */}
+        <div className="fixed bottom-5 right-5 flex flex-col items-end gap-3">
+          {open && (
+            <div className="flex flex-col gap-3 mb-2 animate-slide-up">
+              <button
+                className="flex items-center justify-center gap-2 w-[180px] h-11 bg-[#171a39] rounded-lg text-white font-medium shadow-md hover:opacity-90 transition disabled:opacity-60"
+                onClick={handleExportPDF}
+                disabled={exporting}
+              >
+                {exporting ? (
+                  <>
+                    <ImSpinner2 className="text-lg animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <FaFilePdf className="text-lg" />
+                    Export PDF
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowPublishOptions(true)}
+
+
+                className="flex items-center justify-center gap-2 w-[180px] h-11 border-2  bg-white border-[#171a39] rounded-lg text-[#171a39] font-medium shadow-md hover:bg-[#171a39] hover:text-white transition disabled:opacity-60"
+              >
+                {publishing ? (
+                  <>
+                    <ImSpinner2 className="text-lg animate-spin" />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <MdPublishedWithChanges className="text-lg" />
+                    Publish
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Floating Toggle Button */}
+          <button
+            className="w-14 h-14 rounded-full bg-[#171a39] text-white shadow-lg flex items-center justify-center hover:opacity-90 transition"
+            onClick={() => setOpen(!open)}
+          >
+            {open ? <IoMdClose size={28} /> : <IoMdAdd size={28} />}
+          </button>
+        </div>
+      </div>{/* Publish Options Popup */}
+
+      {showPublishOptions && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-lg w-96 p-6 relative">
+            {/* Close Button */}
             <button
-              className="flex items-center justify-center gap-2 w-[180px] h-11 bg-[#171a39] rounded-lg text-white font-medium shadow-md hover:opacity-90 transition disabled:opacity-60"
-              onClick={handleExportPDF}
-              disabled={exporting}
+              title='sdas'
+              className="absolute top-3 right-3 text-gray-600 hover:text-gray-900"
+              onClick={() => setShowPublishOptions(false)}
             >
-              {exporting ? (
-                <>
-                  <ImSpinner2 className="text-lg animate-spin" />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <FaFilePdf className="text-lg" />
-                  Export PDF
-                </>
-              )}
+              <IoMdClose size={24} />
             </button>
 
+            <h2 className="text-xl font-bold mb-4 text-center text-[#171a39]" >Also Publish To</h2>
+
+            <div className="space-y-3">
+              {/* ✅ Mailchimp (enabled) */}
+              <label
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition ${selectedPlatforms.includes("mailchimp")
+                  ? "bg-blue-100"
+                  : "bg-blue-50"
+                  }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedPlatforms.includes("mailchimp")}
+                  onChange={() => togglePlatform("mailchimp")}
+                  className="accent-blue-600"
+                />
+                <Mail className="w-5 h-5 text-blue-600" />
+                <span className="text-gray-800 font-medium">Mailchimp</span>
+              </label>
+
+              {/* 🚫 Social Media (disabled) */}
+              <label className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-100 opacity-70 cursor-not-allowed">
+                <input
+                  type="checkbox"
+                  disabled
+                  className="accent-blue-600"
+                />
+                <Globe className="w-5 h-5 text-gray-400" />
+                <span className="text-gray-600 font-medium">Social Media</span>
+                <span className="ml-auto text-sm text-gray-500 italic">Coming Soon</span>
+              </label>
+
+              {/* 🚫 Other Platforms (disabled) */}
+              <label className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-100 opacity-70 cursor-not-allowed">
+                <input
+                  type="checkbox"
+                  disabled
+                  className="accent-blue-600"
+                />
+                <Shield className="w-5 h-5 text-gray-400" />
+                <span className="text-gray-600 font-medium">Other Platforms</span>
+                <span className="ml-auto text-sm text-gray-500 italic">Coming Soon</span>
+              </label>
+            </div>
+
+            {/* Confirm Publish Button */}
             <button
               onClick={handlePublishNewsletter}
-              disabled={publishing}
-              className="flex items-center justify-center gap-2 w-[180px] h-11 border-2  bg-white border-[#171a39] rounded-lg text-[#171a39] font-medium shadow-md hover:bg-[#171a39] hover:text-white transition disabled:opacity-60"
+              disabled={ publishing}
+              className="mt-6 w-full h-11 flex items-center justify-center gap-2 bg-[#171a39] text-white rounded-lg shadow hover:bg-[#0f122a] transition disabled:opacity-50"
             >
               {publishing ? (
                 <>
@@ -575,16 +688,11 @@ useEffect(() => {
               )}
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Floating Toggle Button */}
-        <button
-          className="w-14 h-14 rounded-full bg-[#171a39] text-white shadow-lg flex items-center justify-center hover:opacity-90 transition"
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <IoMdClose size={28} /> : <IoMdAdd size={28} />}
-        </button>
-      </div>
-    </div>
+
+    </>
+
   );
 }

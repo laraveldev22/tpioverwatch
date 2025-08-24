@@ -3,9 +3,11 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../layout/DashboardLayout";
 import axios from "axios";
-import { FiSearch } from "react-icons/fi";
+import { FiEye, FiSearch } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
+
 
 interface Article {
     id: string;
@@ -16,13 +18,19 @@ interface Article {
     created_at: string;
     updated_at: string;
 }
-
+const articleCategories = {
+    A: "Feature Story",
+    B: "Data/Report Summary",
+    C: "Events & Commemoration",
+    D: "Historical or Cultural Insight",
+}
 const ArticlesPage = () => {
     const [articles, setArticles] = useState<Article[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [title, setTitle] = useState()
+    const route = useRouter()
     const searchParams = useSearchParams();
     const newsletterId = searchParams.get("newsletter"); // ✅ this gives your ID
     const itemsPerPage = 5;
@@ -120,6 +128,8 @@ const ArticlesPage = () => {
                                 <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Byline</th>
                                 <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Created</th>
                                 <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Updated</th>
+                                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Action</th>
+
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -128,8 +138,10 @@ const ArticlesPage = () => {
                                     key={article.id}
                                     className="hover:bg-[#fef3c7] transition-colors duration-200 cursor-pointer"
                                 >
-                                    <td className="px-6 py-4 text-sm text-gray-700 truncate">{article.title}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 truncate">{article.category}</td>
+                                    <td onClick={() => route.push(`/news-letter-view?id=${article.id}&newsletterId=${newsletterId}`)} className="px-6 cursor-pointer py-4 text-sm text-gray-700 max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
+                                        {article.title}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 truncate">  {articleCategories[article.category as keyof typeof articleCategories] || article.category}</td>
                                     <td className="px-6 py-4 text-sm">
                                         <span
                                             className={`px-2 py-1 rounded-full text-white font-semibold text-xs ${article.is_newsletter ? "bg-green-500" : "bg-yellow-500"
@@ -145,7 +157,15 @@ const ArticlesPage = () => {
                                     <td className="px-6 py-4 text-sm text-gray-500 truncate">
                                         {new Date(article.updated_at).toLocaleDateString()}
                                     </td>
-
+                                    <td className="px-6 py-4 text-sm text-gray-700 flex gap-2 flex justify-center">
+                                        <button
+                                            onClick={() => route.push(`/news-letter-view?id=${article.id}&newsletterId=${newsletterId}`)}
+                                            className="text-blue-600 hover:text-blue-800 transition"
+                                            title="View"
+                                        >
+                                            <FiEye size={18} />
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

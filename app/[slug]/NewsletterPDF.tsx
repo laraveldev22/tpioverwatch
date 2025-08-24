@@ -400,53 +400,63 @@ const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
 
         <View style={styles.footerMain}>
             {/* Left side - Support details */}
-            <View style={styles.footerLeft}>
-                <View style={styles.rows}>
-                    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
-                        <Path
-                            d="M12 2L2 7v5c0 5 5 10 10 10s10-5 10-10V7l-10-5z"
-                            fill="white"
-                        />
-                    </Svg>
-                    <Text style={styles.text}>Veteran Support Line</Text>
-                </View>
-                <View style={styles.rows}>
-                    <Text style={styles.text}>National Veterans Helpline</Text>
-                </View>
-                <View style={styles.rows}>
-                    <Text style={styles.text}>171 Richmond Rd, Richmond SA 5033</Text>
-                </View>
+           <View style={styles.footerLeft}>
+  {/* Title */}
+  
 
-                <View style={styles.rows}>
-                    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
-                        <Path
-                            d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.5.74 3.85.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.07 22 2 13.93 2 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.35.25 2.65.74 3.85a1 1 0 01-.21 1.11l-2.2 2.2z"
-                            fill="white"
-                        />
-                    </Svg>
-                    <Text style={styles.text}>Freecall: 1800 VET HELP (08 8351 8140)</Text>
-                </View>
+  <View style={styles.rows}>
+    <Text style={styles.text}>Veterans Overwatch</Text>
+  </View>
 
-                <View style={styles.rows}>
-                    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
-                        <Path
-                            d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h5v2H8v-2z"
-                            fill="white"
-                        />
-                    </Svg>
-                    <Text style={styles.text}>Email: office@tpi-sa.com.au</Text>
-                </View>
-                <View style={styles.rows}>
-                    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
-                        <Path
-                            d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 18.93V20h-2v.93A8.001 8.001 0 014.07 13H5v-2H4.07A8.001 8.001 0 0111 3.07V4h2V3.07A8.001 8.001 0 0119.93 11H19v2h.93A8.001 8.001 0 0113 19.93z"
-                            fill="white"
-                        />
-                    </Svg>
-                    <Text style={styles.text}>Website: https://tpi-sa.com.au</Text>
-                </View>
+  <View style={styles.rows}>
+    <Text style={styles.text}>171 Richmond Rd, Richmond SA 5033</Text>
+  </View>
 
-            </View>
+  {/* Phone */}
+  <View style={styles.rows}>
+    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
+      <Path
+        d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.5.74 3.85.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.07 22 2 13.93 2 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.35.25 2.65.74 3.85a1 1 0 01-.21 1.11l-2.2 2.2z"
+        fill="white"
+      />
+    </Svg>
+    <Text style={styles.text}>Phone: (08) 8351 8140</Text>
+  </View>
+
+  {/* Fax */}
+  <View style={styles.rows}>
+    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
+      <Path
+        d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h5v2H8v-2z"
+        fill="white"
+      />
+    </Svg>
+    <Text style={styles.text}>Fax: (08) 8351 7781</Text>
+  </View>
+
+  {/* Email */}
+  <View style={styles.rows}>
+    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
+      <Path
+        d="M2 4h20v16H2V4zm2 2v12h16V6H4zm8 5l8-5H4l8 5z"
+        fill="white"
+      />
+    </Svg>
+    <Text style={styles.text}>Email: office@tpi-sa.com.au</Text>
+  </View>
+
+  {/* Website */}
+  <View style={styles.rows}>
+    <Svg width={12} height={12} viewBox="0 0 24 24" style={styles.icon}>
+      <Path
+        d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 18.93V20h-2v.93A8.001 8.001 0 014.07 13H5v-2H4.07A8.001 8.001 0 0111 3.07V4h2V3.07A8.001 8.001 0 0119.93 11H19v2h.93A8.001 8.001 0 0113 19.93z"
+        fill="white"
+      />
+    </Svg>
+    <Text style={styles.text}>Website: https://tpi-sa.com.au</Text>
+  </View>
+</View>
+
 
             {/* Right side - Date + Logo */}
             <View style={styles.footerRight}>

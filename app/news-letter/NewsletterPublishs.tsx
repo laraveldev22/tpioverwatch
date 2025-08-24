@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Mail, Phone, Shield, Globe } from 'lucide-react';
+import { Mail, Phone, Shield, Globe, Printer } from 'lucide-react';
 import axios from 'axios';
 
 interface FullArticle {
@@ -22,8 +22,8 @@ interface FullArticle {
   conversation_session?: string;
 }
 
- 
- function NewsletterPublishs() {
+
+function NewsletterPublishs() {
   const [publishedArticles, setPublishedArticles] = useState<FullArticle[]>([]);
   const [articleIds, setArticleIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ interface FullArticle {
   const [editableMessage, setEditableMessage] = useState(
     "Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
   );
-  const [newsLetterNo,setNewsLetterNo]=useState("")
+  const [newsLetterNo, setNewsLetterNo] = useState("")
   const searchParams = useSearchParams();
   const slug = searchParams.get("slug"); // ✅ get slug from query
   const currentDate = new Date();
@@ -65,7 +65,7 @@ interface FullArticle {
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/newsletters/${slug}/with-articles/`,
-       
+
       );
 
       // The API returns the newsletter object at root
@@ -142,7 +142,7 @@ interface FullArticle {
           <div className="flex-1 text-center">
             <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
           </div>
-         <div className="flex flex-col items-end">
+          <div className="flex flex-col items-end">
             <span className="text-2xl font-bold">{currentDateFormatted}</span>
             <span className="text-lg mt-3 font-medium text-gray-300 uppercase">{newsLetterNo}</span>
           </div>
@@ -289,26 +289,40 @@ interface FullArticle {
             ))}
 
             <div className="bg-[#171a39] text-white p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
+
               <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-5 w-5" />
-                  <span className="font-bold">Veteran Support Line</span>
-                </div>
-                <p>National Veterans Helpline</p>
-                <p>PO Box 400, Adelaide SA 5000</p>
+
+                <p className='text-lg'>Veterans Overwatch</p>
+                <p>171 Richmond Rd, Richmond SA 5033</p>
+
                 <p className="flex items-center space-x-2">
-                  <Phone className="h-5 w-5" />
-                  <span>Freecall: 1800 VET HELP (1800 838 4357)</span>
+                  <Phone className="h-5 w-5 text-white" />
+                  <span>Phone: (08) 8351 8140</span>
                 </p>
+
                 <p className="flex items-center space-x-2">
-                  <Mail className="h-5 w-5" />
-                  <span>Email: support@veteranshelp.org</span>
+                  <Printer className="h-5 w-5 text-white" />
+                  <span>Fax: (08) 8351 7781</span>
                 </p>
+
                 <p className="flex items-center space-x-2">
-                  <Globe className="h-5 w-5" />
-                  <span>Website: veteranshelp.org</span>
+                  <Mail className="h-5 w-5 text-white" />
+                  <span>Email: office@tpi-sa.com.au</span>
+                </p>
+
+                <p className="flex items-center space-x-2">
+                  <Globe className="h-5 w-5 text-white" />
+                  <a
+                    href="https://tpi-sa.com.au"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white undefined hover:underline"
+                  >
+                    Website: https://tpi-sa.com.au
+                  </a>
                 </p>
               </div>
+
               <img src="/mainLogo.png" alt="Logo" className="h-24 mt-4 md:mt-0" />
             </div>
           </div>

@@ -687,6 +687,7 @@ const page = () => {
             });
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article unpublished successfully!");
+             window.location.reload();
             setTimeout(() => setSaveSuccess(null), 2000);
         } catch (err) {
             setError(`Failed to unpublish article: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -768,7 +769,7 @@ const page = () => {
                 setCurrentArticle(newArticle);
                 setSelectedCategory(newArticle.category || "A");
                 fetchArticles();
-             }
+            }
         } catch (err) {
             console.error("Search error:", err);
             setError(`Search failed: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -777,6 +778,15 @@ const page = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const getGlobalSlotNumber = (articleId: string) => {
+        const allSelected = Object.values(articleData)
+            .flat()
+            .filter((a) => a.is_newsletter); // सारे categories से newsletter वाले articles निकालो
+
+        const index = allSelected.findIndex((a) => a.id === articleId);
+        return index >= 0 ? index + 1 : null;
     };
 
     const handleSearchKeyPress = (e: React.KeyboardEvent) => {
@@ -1018,6 +1028,8 @@ const page = () => {
         }
     }, [router]);
 
+
+
     return (
         <DashboardLayout getPrompts={setSearchQuery} refetch={refetch}>
             <div className="flex-1 flex flex-col">
@@ -1126,44 +1138,63 @@ const page = () => {
                             {Object.entries(articleCategories).map(([category, categoryName]) => (
                                 <div
                                     key={category}
-                                    className="bg-white shadow-md rounded-lg  overflow-hidden transform hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                                    className="bg-white shadow-md rounded-lg overflow-hidden transform hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
                                     onClick={() => handleCategoryClick(category)}
                                 >
                                     <div className="bg-[#D5ECFF] px-3 py-3 text-center">
-                                        <h3 className="text-sm font-medium text-gray-800">{categoryName} ({articleData[category]?.length || 0})</h3>
+                                        <h3 className="text-sm font-medium text-gray-800">
+                                            {categoryName} ({articleData[category]?.length || 0})
+                                        </h3>
                                     </div>
+
                                     <div className="relative">
                                         <div className="h-40 overflow-y-auto article-shelf-scroll">
                                             <div className="p-2 space-y-1">
                                                 {articleLoading[category] ? (
-                                                    <div className="bg-gray-100 p-3 rounded text-xs text-gray-500 text-center animate-pulse">Loading articles...</div>
+                                                    <div className="bg-gray-100 p-3 rounded text-xs text-gray-500 text-center animate-pulse">
+                                                        Loading articles...
+                                                    </div>
                                                 ) : articleError[category] ? (
-                                                    <div className="bg-red-50 p-3 rounded text-xs text-red-600 text-center">{articleError[category]}</div>
+                                                    <div className="bg-red-50 p-3 rounded text-xs text-red-600 text-center">
+                                                        {articleError[category]}
+                                                    </div>
                                                 ) : (
-                                                    articleData[category].map((article) => (
-                                                        <div
-                                                            key={article.id}
-                                                            className={`shadow-md p-3 rounded text-xs cursor-pointer hover:scale-105 transition-all duration-200 ${currentArticle?.id === article.id ? "bg-[#132A36] text-white" : "bg-gray-100 text-gray-700 hover:bg-blue-50"}`}
-                                                            title={article.title}
-                                                            draggable={true}
-                                                            onDragStart={(e) => {
-                                                                e.dataTransfer.setData("application/json", JSON.stringify(article));
-                                                                e.dataTransfer.effectAllowed = "copy";
-                                                            }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleArticleClick(article);
-                                                            }}
-                                                        >
-                                                            {article.title.length > 50 ? `${article.title.substring(0, 50)}...` : article.title}
+                                                    articleData[category].map((article) => {
+                                                        const slotNumber = getGlobalSlotNumber(article.id);
 
-                                                            {article.is_newsletter && (
-                                                                <span className="ml-2 text-green-500">
-                                                                    (Slot {articleData[category].filter(a => a.is_newsletter).indexOf(article) + 1})
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    ))
+                                                        return (
+                                                            <div
+                                                                key={article.id}
+                                                                className={`shadow-md p-3 rounded text-xs cursor-pointer hover:scale-105 transition-all duration-200 ${currentArticle?.id === article.id
+                                                                        ? "bg-[#132A36] text-white"
+                                                                        : "bg-gray-100 text-gray-700 hover:bg-blue-50"
+                                                                    }`}
+                                                                title={article.title}
+                                                                draggable={true}
+                                                                onDragStart={(e) => {
+                                                                    e.dataTransfer.setData(
+                                                                        "application/json",
+                                                                        JSON.stringify(article)
+                                                                    );
+                                                                    e.dataTransfer.effectAllowed = "copy";
+                                                                }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleArticleClick(article);
+                                                                }}
+                                                            >
+                                                                {article.title.length > 50
+                                                                    ? `${article.title.substring(0, 50)}...`
+                                                                    : article.title}
+
+                                                                {slotNumber && (
+                                                                    <span className="ml-2 text-green-500">
+                                                                        (Slot {slotNumber})
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })
                                                 )}
                                             </div>
                                         </div>

@@ -5,7 +5,7 @@ import DashboardLayout from "../layout/DashboardLayout";
 import axios from "axios";
 import { FiSearch } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 
 interface Article {
   id: string;
@@ -105,11 +105,11 @@ const ArticlesPage = () => {
             <thead className="bg-[#171a39] text-white">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase">Title</th>
-                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Ad Hoc</th>
-                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Newsletter URL</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">Special Newsletter</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase">View</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase">Included Articles</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase">Created</th>
-                
+
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -118,7 +118,7 @@ const ArticlesPage = () => {
                   key={nl.id}
                   className="hover:bg-[#fef3c7] transition-colors duration-200"
                 >
-                  <td className="px-6 py-4 text-sm text-gray-700 truncate">{nl.title}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">{nl.title}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{nl.ad_hoc ? "Yes" : "No"}</td>
                   <td className="px-6 py-4 text-sm text-blue-600 underline truncate">
                     <button
@@ -139,7 +139,7 @@ const ArticlesPage = () => {
                   <td className="px-6 py-4 text-sm text-gray-500 truncate">
                     {new Date(nl.created_at).toLocaleDateString()}
                   </td>
-                  
+
                 </tr>
               ))}
             </tbody>
