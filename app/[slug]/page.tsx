@@ -47,6 +47,8 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isAdhoc, setIsAdhoc] = useState(false)
+  const [dynamicCode, setDynamicCode] = useState("");
+
   const [editableTitle, setEditableTitle] = useState("TPI Newsletter");
   const [editableMessageTitle, setEditableMessageTitle] = useState("Editor's Message");
   const [editableMessage, setEditableMessage] = useState(
@@ -209,6 +211,11 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
     }
   };
 
+  // If you want it to generate dynamically based on some logic:
+  useEffect(() => {
+    const code = `VO${new Date().getFullYear()}W${Math.floor(Math.random() * 10000)}`;
+    setDynamicCode(code);
+  }, []);
   useEffect(() => {
     if (slug !== expectedSlug) {
       router.replace(`/${expectedSlug}`);
@@ -286,14 +293,14 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
         {/* Right side: Save button */}
         {
-          isAdhoc&&  <button
-          onClick={() => setIsEditing(false)}
-          className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg shadow hover:bg-green-700 transition"
-        >
-          Save
-        </button>
+          isAdhoc && <button
+            onClick={() => setIsEditing(false)}
+            className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg shadow hover:bg-green-700 transition"
+          >
+            Save
+          </button>
         }
-      
+
       </div>
 
 
@@ -302,10 +309,11 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
         <header className="bg-[#171a39] text-white px-6 py-8 pb-11 flex justify-between rounded-lg items-center">
           <img src="/mainLogo.png" alt="Logo" className="h-24" />
+
           <div className="flex-1 text-center">
             {isEditing ? (
               <input
-                title='ss'
+                title="ss"
                 type="text"
                 value={editableTitle}
                 onChange={(e) => setEditableTitle(e.target.value)}
@@ -315,8 +323,13 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
               <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
             )}
           </div>
-          <span className="text-2xl font-bold">{currentDateFormatted}</span>
+
+          <div className="flex flex-col items-end">
+            <span className="text-2xl font-bold">{currentDateFormatted}</span>
+            <span className="text-lg mt-3 font-medium text-gray-300">{dynamicCode}</span>
+          </div>
         </header>
+
 
         <div className="p-6">
           <section className="mb-8 p-0 rounded-lg">

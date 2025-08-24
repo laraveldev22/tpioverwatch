@@ -140,7 +140,10 @@ interface FullArticle {
           <div className="flex-1 text-center">
             <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
           </div>
-          <span className="text-2xl font-bold">{currentDateFormatted}</span>
+         <div className="flex flex-col items-end">
+            <span className="text-2xl font-bold">{currentDateFormatted}</span>
+            <span className="text-lg mt-3 font-medium text-gray-300 capitalize">{slug}</span>
+          </div>
         </header>
 
         <div className="p-6">

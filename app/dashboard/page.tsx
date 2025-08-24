@@ -13,6 +13,7 @@ import ArticlePDF, { ArticlePDFProps } from './ArticlePDF';
 import axios from 'axios';
 import { FaEye, FaFilePdf, FaGripVertical, FaTrash } from 'react-icons/fa';
 import { CgSpinner } from "react-icons/cg";
+import { FiMail } from 'react-icons/fi';
 
 const articleCategories = {
     A: "Feature Story",
@@ -1019,10 +1020,24 @@ const page = () => {
             <div className="flex-1 flex flex-col">
                 <main className="flex-1 p-3 lg:p-5 space-y-4 lg:space-y-6">
                     <div className="bg-white shadow-lg border border-gray-100 rounded-lg transform hover:shadow-xl transition-all duration-300">
-                        <div className="bg-[#171a39] text-white text-center py-4 rounded-t-lg">
+                        <div className="bg-[#171a39] text-white flex justify-between items-center px-6 py-4 rounded-t-lg">
+                            {/* Left: Header */}
                             <h2 className="text-lg lg:text-xl font-semibold">NEWSLETTER SHELF</h2>
-                            {/* <p className="text-xs lg:text-sm text-gray-300 mt-1">Click an article to see it in the Article Frame</p> */}
+
+                            {/* Right: View Newsletter button with icon */}
+                            <button
+                                disabled={newsletters.length <= 0}
+                                onClick={() => window.open("/newsletterpublish", "_blank")}
+                                className="flex items-center gap-2 px-4 py-2 rounded-md font-semibold transition
+             bg-white text-[#171a39] hover:bg-gray-200
+             disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
+                            >
+                                <FiMail className="w-5 h-5" />
+                                View Newsletter
+                            </button>
+
                         </div>
+
                         <div className="p-4 lg:p-6">
                             <div className="mb-4">
                                 {newsletterLoader ? (
