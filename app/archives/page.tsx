@@ -130,7 +130,7 @@ const ArticlesPage = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
                     <button
-                      onClick={() => router.push(`/news-letter-articles?newsletter=${nl.id}`)}
+                      onClick={() => router.push(`/newsletter-articles?newsletter=${nl.id}`)}
                       className="px-3 py-1 bg-[#171a39] text-white rounded-lg text-xs hover:bg-[#2a2d55] transition"
                     >
                       View Articles ({nl.included_articles.length})
