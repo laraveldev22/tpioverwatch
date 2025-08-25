@@ -648,7 +648,7 @@ const page = () => {
     };
 
     const handleUnpublish = async () => {
-          localStorage.getItem("token");
+        const token = localStorage.getItem("token");
         if (!currentArticle || !token) {
             setError("No article selected or authentication required");
             clearError();
@@ -668,7 +668,7 @@ const page = () => {
                 if (response.status === 401) {
                     setError("Authentication failed. Please log in again.");
                     clearError();
-                    localStorage.removeItem("token");
+                   
                     setToken(null);
                     router.push("/");
                     return;
