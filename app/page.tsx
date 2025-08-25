@@ -46,7 +46,7 @@ export default function SignInPage() {
         return;
       }
       Cookies.set("token", data.token, { expires: 1, path: "/dashboard" });
-
+localStorage.setItem("token",data.token)
       toast.success("Login successful 🎉");
       router.push("/dashboard");
     } catch (err) {
