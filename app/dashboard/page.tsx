@@ -652,7 +652,7 @@ const page = () => {
 
         if (!currentArticle || !token) {
             setError("No article selected or authentication required");
-            clearError();
+     
             return;
         }
 
@@ -897,6 +897,7 @@ const page = () => {
 
 
     const remove = async (item: Article) => {
+        const token = localStorage.setItem("token")
         handleUnpublish()
         try {
             const updatedArticle = { ...currentArticle, is_newsletter: 0 };
