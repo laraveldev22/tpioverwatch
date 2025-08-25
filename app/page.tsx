@@ -45,10 +45,9 @@ export default function SignInPage() {
         toast.error(error || "Login failed ❌");
         return;
       }
-      Cookies.set("token", data.token, { expires: 1, path: "/dashboard" });
-localStorage.setItem("token",data.token)
+      Cookies.set("token", data.token, { expires: 7, path: "/" });
       toast.success("Login successful 🎉");
-      router.push("/dashboard");
+      router.refresh();
     } catch (err) {
       setError("Network error. Please check your connection.");
       toast.error("Network error ❌");
