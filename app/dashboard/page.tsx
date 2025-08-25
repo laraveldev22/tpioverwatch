@@ -636,7 +636,7 @@ const page = () => {
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article published successfully!");
             setNewsletterReFetch((prev) => prev + 1);
-            toast.success("Newsletter published successfully!");
+            toast.success("Newsletter Add successfully!");
 
         } catch (err) {
             setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
