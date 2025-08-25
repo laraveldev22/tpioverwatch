@@ -637,7 +637,7 @@ const page = () => {
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article published successfully!");
             setNewsletterReFetch((prev) => prev + 1);
-            toast.success("Newsletter Add successfully!");
+            toast.success("Newsletter Added successfully!");
 
         } catch (err) {
             setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -681,7 +681,7 @@ const page = () => {
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article unpublished successfully!");
             setNewsletterReFetch((prev) => prev + 1);
-            toast.success("Newsletter Remove successfully!");
+            toast.success("Newsletter Removed successfully!");
             setTimeout(() => setSaveSuccess(null), 2000);
         } catch (err) {
             setError(`Failed to unpublish article: ${err instanceof Error ? err.message : "Unknown error"}`);
