@@ -45,8 +45,9 @@ export default function SignInPage() {
         toast.error(error || "Login failed ❌");
         return;
       }
-      Cookies.set("token", data.token, { expires: 1, path: "/" });
       localStorage.setItem("token", data.token)
+
+      Cookies.set("token", data.token, { expires: 1, path: "/" });
       toast.success("Login successful 🎉");
       router.push("/dashboard");
     } catch (err) {
