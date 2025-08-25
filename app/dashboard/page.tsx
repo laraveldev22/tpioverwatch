@@ -15,6 +15,8 @@ import { FaEye, FaFilePdf, FaGripVertical, FaTrash } from 'react-icons/fa';
 import { CgSpinner } from "react-icons/cg";
 import { FiMail } from 'react-icons/fi';
 
+import toast from "react-hot-toast";
+
 const articleCategories = {
     A: "Feature Story",
     B: "Data/Report Summary",
@@ -41,7 +43,8 @@ interface Article {
 interface FullArticle extends Article {
     is_auto_generated?: boolean
     conversation_session?: string
-    updated_at?: string
+    updated_at?: string,
+    cta_url?: string,
 }
 
 interface ChatMessage {
@@ -69,7 +72,6 @@ const page = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [currentArticle, setCurrentArticle] = useState<FullArticle | null>(null);
-    const [publishedArticleIds, setPublishedArticleIds] = useState<string[]>([]);
     const [articleSaving, setArticleSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -81,6 +83,7 @@ const page = () => {
     const [isEditingKeyFacts, setIsEditingKeyFacts] = useState(false);
     const [isEditingQuoteBlock, setIsEditingQuoteBlock] = useState(false);
     const [isEditingCta, setIsEditingCta] = useState(false);
+    const [isEditingCtaLink, setIsEditingCtaLink] = useState(false);
     const [editedTitle, setEditedTitle] = useState("");
     const [editedByline, setEditedByline] = useState("");
     const [editedLeadParagraph, setEditedLeadParagraph] = useState("");
@@ -88,9 +91,8 @@ const page = () => {
     const [editedKeyFacts, setEditedKeyFacts] = useState("");
     const [editedQuoteBlock, setEditedQuoteBlock] = useState("");
     const [editedCta, setEditedCta] = useState("");
+    const [editedCtaLink, setEditedCtaLink] = useState("");
     const [editedTags, setEditedTags] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [articles, setArticles] = useState<Article[]>([]);
     const [newsletters, setNewsLetters] = useState<Article[]>([]);
     const titleRef = useRef<HTMLTextAreaElement>(null);
     const bylineRef = useRef<HTMLInputElement>(null);
@@ -100,7 +102,8 @@ const page = () => {
     const quoteBlockRef = useRef<HTMLTextAreaElement>(null);
     const ctaRef = useRef<HTMLInputElement>(null);
     const [refetch, setRefetch] = useState(0)
-    console.log(refetch, "refetchsss")
+    const [newslettReFetch, setNewsletterReFetch] = useState(0)
+    const [articlesLoading, setArticlesLoading] = useState(true)
 
     // Attach the click-outside handler for each editable field
     //@ts-ignore
@@ -118,12 +121,11 @@ const page = () => {
     useClickOutside(quoteBlockRef, () => setIsEditingQuoteBlock(false));
     //@ts-ignore
     useClickOutside(ctaRef, () => setIsEditingCta(false));
-
+    //@ts-ignore
+    useClickOutside(ctaRef, () => setIsEditingCtaLink(false));
 
     const [newsletterLoader, setnewsLetterLoader] = useState(true)
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-
 
     const [articleData, setArticleData] = useState<{ [key: string]: Article[] }>({
         A: [], B: [], C: [], D: [],
@@ -407,12 +409,6 @@ const page = () => {
             const category = currentArticle.category || selectedCategory;
             setArticleData((prev) => ({ ...prev, [category]: prev[category].filter((article) => article.id !== currentArticle.id) }));
             setCurrentArticle(null);
-            setPublishedArticleIds((prev) => {
-                const newIds = prev.filter((id) => id !== currentArticle.id);
-                localStorage.setItem("publishedArticleIds", JSON.stringify(newIds));
-                console.log("Updated publishedArticleIds after delete:", newIds);
-                return newIds;
-            });
             setSaveSuccess("Article deleted successfully!");
             setTimeout(() => setSaveSuccess(null), 3000);
         } catch (err) {
@@ -435,7 +431,11 @@ const page = () => {
         setIsEditingQuoteBlock(false);
         setIsEditingCta(false);
         const fullArticle = await fetchArticleDetails(article.id);
-        if (fullArticle) setCurrentArticle(fullArticle.article);
+
+        if (fullArticle) setCurrentArticle({
+            ...fullArticle.article,
+
+        });
     }, [fetchArticleDetails]);
 
     const normalizeArticle = (article: Article) => {
@@ -610,7 +610,9 @@ const page = () => {
             }
             // Update newsletter status
             const updatedArticle = {
-                ...fullArticle, is_newsletter: 1,
+                ...fullArticle,
+                is_newsletter: 1,
+                cta_url: editedCtaLink,
             };
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${currentArticle.id}/`, {
                 method: "PUT",
@@ -629,19 +631,13 @@ const page = () => {
                 throw new Error(`Failed to update article ${currentArticle.id} newsletter status`);
             }
             const savedArticle = await response.json();
-            // Update publishedArticleIds and save to localStorage
-            setPublishedArticleIds((prev) => {
-                if (prev.includes(savedArticle.id)) {
-                    return prev; // Avoid duplicates
-                }
-                const newIds = [...prev, savedArticle.id];
-                localStorage.setItem("publishedArticleIds", JSON.stringify(newIds));
-                console.log("Updated publishedArticleIds:", newIds);
-                return newIds;
-            });
+             
+            
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article published successfully!");
-            window.location.reload();
+            setNewsletterReFetch((prev) => prev + 1);
+            toast.success("Newsletter published successfully!");
+
         } catch (err) {
             setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
             clearError();
@@ -679,15 +675,11 @@ const page = () => {
                 throw new Error("Failed to update article newsletter status");
             }
             const savedArticle = await response.json();
-            setPublishedArticleIds((prev) => {
-                const newIds = prev.filter((id) => id !== currentArticle.id);
-                localStorage.setItem("publishedArticleIds", JSON.stringify(newIds));
-                console.log("Updated publishedArticleIds after unpublish:", newIds);
-                return newIds;
-            });
+            
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article unpublished successfully!");
-             window.location.reload();
+            setNewsletterReFetch((prev) => prev + 1);
+            toast.success("Newsletter Remove successfully!");
             setTimeout(() => setSaveSuccess(null), 2000);
         } catch (err) {
             setError(`Failed to unpublish article: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -825,14 +817,11 @@ const page = () => {
 
     // Fetch articles from API
     const fetchArticles = async () => {
-        setLoading(true);
 
-        const token =
-            typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
         if (!token) {
-
-            setLoading(false);
+            toast.error("⚠️ You must be logged in to perform this action");
             return;
         }
 
@@ -856,12 +845,12 @@ const page = () => {
                 }
             });
 
-            setArticles(fetchedArticles);
+
             setArticleData(grouped);
         } catch (error) {
             console.error("Error fetching articles:", error);
         } finally {
-            setLoading(false);
+            setArticlesLoading(false);
         }
     };
 
@@ -904,6 +893,8 @@ const page = () => {
             setnewsLetterLoader(false);
         }
     };
+
+
     const remove = async (item: Article) => {
         handleUnpublish()
         try {
@@ -925,12 +916,7 @@ const page = () => {
                 throw new Error("Failed to update article newsletter status");
             }
             const savedArticle = await response.json();
-            setPublishedArticleIds((prev) => {
-                const newIds = prev.filter((id) => id !== item.id);
-                localStorage.setItem("publishedArticleIds", JSON.stringify(newIds));
-                console.log("Updated publishedArticleIds after unpublish:", newIds);
-                return newIds;
-            });
+            
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article unpublished successfully!");
             setTimeout(() => setSaveSuccess(null), 2000);
@@ -943,10 +929,31 @@ const page = () => {
             setArticleSaving(false);
         }
     }
+
     useEffect(() => {
-        fetchArticles();
-        fetchNewsletters()
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === "pageReload" && event.newValue) {
+                try {
+                    const data = JSON.parse(event.newValue);
+                    if (data.page === "dashboard") {
+
+                        fetchNewsletters();
+                    }
+                } catch (err) {
+                    console.error("Invalid storage payload", err);
+                }
+            }
+        };
+
+        window.addEventListener("storage", handleStorage);
+        return () => window.removeEventListener("storage", handleStorage);
     }, []);
+
+    useEffect(() => {
+        fetchNewsletters()
+    }, [newslettReFetch]);
+
+    useEffect(() => { setArticlesLoading(true); fetchArticles(); }, [])
 
     useEffect(() => {
         if (currentArticle) {
@@ -971,6 +978,7 @@ const page = () => {
             setEditedQuoteBlock(currentArticle.quote_block || '');
             setEditedCta(currentArticle.cta || "");
             setEditedTags(currentArticle.tags || "");
+            setEditedCtaLink(currentArticle.cta_url || "")
         } else {
             setEditedTitle("");
             setEditedByline("");
@@ -1015,10 +1023,7 @@ const page = () => {
         if (savedPublishedIds) {
             try {
                 const parsedIds = JSON.parse(savedPublishedIds);
-                if (Array.isArray(parsedIds)) {
-                    setPublishedArticleIds(parsedIds);
-                    console.log("Loaded publishedArticleIds from localStorage:", parsedIds);
-                }
+                
             } catch (err) {
                 console.error("Error parsing publishedArticleIds from localStorage:", err);
                 localStorage.setItem("publishedArticleIds", JSON.stringify([]));
@@ -1134,74 +1139,84 @@ const page = () => {
                             <h2 className="text-lg lg:text-xl font-semibold">ARTICLE SHELF</h2>
                             <p className="text-xs lg:text-sm text-gray-300 mt-1">Click an article to see it in the Article Frame</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5">
-                            {Object.entries(articleCategories).map(([category, categoryName]) => (
-                                <div
-                                    key={category}
-                                    className="bg-white shadow-md rounded-lg overflow-hidden transform hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                                    onClick={() => handleCategoryClick(category)}
-                                >
-                                    <div className="bg-[#D5ECFF] px-3 py-3 text-center">
-                                        <h3 className="text-sm font-medium text-gray-800">
-                                            {categoryName} ({articleData[category]?.length || 0})
-                                        </h3>
-                                    </div>
 
-                                    <div className="relative">
-                                        <div className="h-40 overflow-y-auto article-shelf-scroll">
-                                            <div className="p-2 space-y-1">
-                                                {articleLoading[category] ? (
-                                                    <div className="bg-gray-100 p-3 rounded text-xs text-gray-500 text-center animate-pulse">
-                                                        Loading articles...
-                                                    </div>
-                                                ) : articleError[category] ? (
-                                                    <div className="bg-red-50 p-3 rounded text-xs text-red-600 text-center">
-                                                        {articleError[category]}
-                                                    </div>
-                                                ) : (
-                                                    articleData[category].map((article) => {
-                                                        const slotNumber = getGlobalSlotNumber(article.id);
+                        {
+                            articlesLoading ? <div className="w-full flex items-center justify-center py-6">
+                                <CgSpinner className="animate-spin w-10 h-10" />
+                            </div> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5">
 
-                                                        return (
-                                                            <div
-                                                                key={article.id}
-                                                                className={`shadow-md p-3 rounded text-xs cursor-pointer hover:scale-105 transition-all duration-200 ${currentArticle?.id === article.id
+
+                                {Object.entries(articleCategories).map(([category, categoryName]) => (
+                                    <div
+                                        key={category}
+                                        className="bg-white shadow-md rounded-lg overflow-hidden transform hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                                        onClick={() => handleCategoryClick(category)}
+                                    >
+                                        <div className="bg-[#D5ECFF] px-3 py-3 text-center">
+                                            <h3 className="text-sm font-medium text-gray-800">
+                                                {categoryName} ({articleData[category]?.length || 0})
+                                            </h3>
+                                        </div>
+
+                                        <div className="relative">
+                                            <div className="h-40 overflow-y-auto article-shelf-scroll">
+                                                <div className="p-2 space-y-1">
+                                                    {articleLoading[category] ? (
+                                                        <div className="bg-gray-100 p-3 rounded text-xs text-gray-500 text-center animate-pulse">
+                                                            Loading articles...
+                                                        </div>
+                                                    ) : articleError[category] ? (
+                                                        <div className="bg-red-50 p-3 rounded text-xs text-red-600 text-center">
+                                                            {articleError[category]}
+                                                        </div>
+                                                    ) : (
+                                                        articleData[category].map((article) => {
+                                                            const slotNumber = getGlobalSlotNumber(article.id);
+
+                                                            return (
+                                                                <div
+                                                                    key={article.id}
+                                                                    className={`shadow-md p-3 rounded text-xs cursor-pointer hover:scale-105 transition-all duration-200 ${currentArticle?.id === article.id
                                                                         ? "bg-[#132A36] text-white"
                                                                         : "bg-gray-100 text-gray-700 hover:bg-blue-50"
-                                                                    }`}
-                                                                title={article.title}
-                                                                draggable={true}
-                                                                onDragStart={(e) => {
-                                                                    e.dataTransfer.setData(
-                                                                        "application/json",
-                                                                        JSON.stringify(article)
-                                                                    );
-                                                                    e.dataTransfer.effectAllowed = "copy";
-                                                                }}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleArticleClick(article);
-                                                                }}
-                                                            >
-                                                                {article.title.length > 50
-                                                                    ? `${article.title.substring(0, 50)}...`
-                                                                    : article.title}
+                                                                        }`}
+                                                                    title={article.title}
+                                                                    draggable={true}
+                                                                    onDragStart={(e) => {
+                                                                        e.dataTransfer.setData(
+                                                                            "application/json",
+                                                                            JSON.stringify(article)
+                                                                        );
+                                                                        e.dataTransfer.effectAllowed = "copy";
+                                                                    }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleArticleClick(article);
+                                                                    }}
+                                                                >
+                                                                    {article.title.length > 50
+                                                                        ? `${article.title.substring(0, 50)}...`
+                                                                        : article.title}
 
-                                                                {slotNumber && (
-                                                                    <span className="ml-2 text-green-500">
-                                                                        (Slot {slotNumber})
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })
-                                                )}
+                                                                    {slotNumber && (
+                                                                        <span className="ml-2 text-green-500">
+                                                                            (Slot {slotNumber})
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+
+
+                            </div>
+                        }
+
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
@@ -1274,6 +1289,7 @@ const page = () => {
                             <div className="bg-[#171a39] text-white text-center py-3 rounded-t-lg">
                                 <h2 className="text-base lg:text-lg font-semibold" id="article">ARTICLE FRAME</h2>
                             </div>
+
                             <div className="flex-1 p-4 overflow-y-auto">
                                 {saveSuccess && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm animate-slideInDown">{saveSuccess}</div>}
                                 {articleDetailLoading && <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-700 text-sm animate-slideInDown">Loading article details...</div>}
@@ -1414,11 +1430,24 @@ const page = () => {
                                 <div className="mt-4">
                                     {isEditingCta ? (
                                         <div className="space-y-2">
-                                            <Input ref={ctaRef} value={editedCta} onChange={(e) => setEditedCta(e.target.value)} className="border-2 border-blue-300 focus:border-blue-500" placeholder="Enter CTA link..." disabled={isDeleting || articleSaving} />
+                                            <Input ref={ctaRef} value={editedCta} onChange={(e) => setEditedCta(e.target.value)} className="border-2 border-blue-300 focus:border-blue-500" placeholder="Enter CTA Content..." disabled={isDeleting || articleSaving} />
                                         </div>
                                     ) : (
                                         <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors" onClick={() => setIsEditingCta(true)}>
-                                            <a href={editedCta} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm hover:underline block" onClick={(e) => e.preventDefault()}>{editedCta || "Click to add CTA link..."}</a>
+                                            <a href={editedCta} target="_blank" rel="noopener noreferrer" className="text-black  " onClick={(e) => e.preventDefault()}>{editedCta || "Click to add CTA Content..."}</a>
+                                            <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-4">
+                                    {isEditingCtaLink ? (
+                                        <div className="space-y-2">
+                                            <Input ref={ctaRef} value={editedCtaLink} onChange={(e) => setEditedCtaLink(e.target.value)} className="border-2 border-blue-300 focus:border-blue-500" placeholder="Enter CTA link..." disabled={isDeleting || articleSaving} />
+                                        </div>
+                                    ) : (
+                                        <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors" onClick={() => setIsEditingCtaLink(true)}>
+                                            <a href={editedCtaLink} target="_blank" rel="noopener noreferrer" className="text-blue-800  hover:text-blue-800 text-sm hover:underline block" onClick={(e) => e.preventDefault()}>{editedCtaLink || "Click to add CTA link..."}</a>
                                             <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
                                         </div>
                                     )}
@@ -1488,6 +1517,7 @@ const page = () => {
 
                                 </div>
                             </div>
+                            
                         </div>
                     </div>
 

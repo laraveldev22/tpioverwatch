@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Mail, Phone, Shield, Globe, Printer } from 'lucide-react';
-import axios from 'axios';
+ import axios from 'axios';
 
 interface FullArticle {
     id: string;
@@ -20,6 +19,7 @@ interface FullArticle {
     image_url: string;
     is_auto_generated?: boolean;
     conversation_session?: string;
+    cta_url?:string;
 }
 
 
@@ -100,6 +100,7 @@ function ArticleView() {
                     article.created_at ||
                     new Date().toISOString(),
                 cta: article.cta || "",
+                cta_url: article.cta_url || ""
             }));
 
             // ✅ id से match करो (searchParams से जो आया है)
@@ -296,7 +297,7 @@ function ArticleView() {
                                             <span>Source: TPI News</span>
                                         </div>
                                         <div>
-                                            <a href={article.cta} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                            <a href={article.cta_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                                                 {article.cta}
                                             </a>
                                         </div>

@@ -20,6 +20,7 @@ interface FullArticle {
     image_url: string;
     is_auto_generated?: boolean;
     conversation_session?: string;
+    cta_url?:string
 }
 
 
@@ -107,6 +108,7 @@ function NewsletterView() {
                     article.created_at ||
                     new Date().toISOString(),
                 cta: article.cta || "",
+                cta_url :article.cta_url ||""
             }));
 
             const filtered = id
@@ -301,7 +303,7 @@ function NewsletterView() {
                                             <span>Source: TPI News</span>
                                         </div>
                                         <div>
-                                            <a href={article.cta} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                            <a href={article.cta_url } target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                                                 {article.cta}
                                             </a>
                                         </div>

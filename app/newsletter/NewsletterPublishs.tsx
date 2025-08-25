@@ -20,6 +20,7 @@ interface FullArticle {
   image_url: string;
   is_auto_generated?: boolean;
   conversation_session?: string;
+  cta_url?:string;
 }
 
 
@@ -64,8 +65,7 @@ function NewsletterPublishs() {
 
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/newsletters/${slug}/with-articles/`,
-
+        `${process.env.NEXT_PUBLIC_API_URL}/newsletters/with-articles/${slug}/`,
       );
 
       // The API returns the newsletter object at root
@@ -108,8 +108,64 @@ function NewsletterPublishs() {
     }
   };
 
+
+  const fetchNewArticles = async () => {
+    setLoading(true);
+
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/newsletters/with-articles/`,
+      );
+
+      // The API returns the newsletter object at root
+      const newsletter = response?.data.newsletter;
+
+      if (!newsletter || !newsletter.included_articles) {
+        console.warn("No articles found in response:", response.data);
+        setPublishedArticles([]);
+
+        setArticleIds([]);
+        return;
+      }
+
+      const transformedArticles = newsletter.included_articles.map((article: any) => ({
+        id: article.id,
+        title: article.title || "Untitled",
+        byline: article.byline || "",
+        lead_paragraph: article.lead_paragraph || "",
+        content: article.content || "",
+        image_url: article.image_url || "",
+        key_facts: formatKeyFacts(article.key_facts || ""),
+        quote_block: article.quote_block || "",
+        tags: article.tags || "",
+        created_at: article.updated_at || article.created_at || new Date().toISOString(),
+        cta: article.cta || "",
+        cta_url :article.article||"",
+         cta: article.cta || "",
+      }));
+      const allArticleIds = transformedArticles.map((a: any) => a.id);
+      setArticleIds(allArticleIds);
+      setPublishedArticles(transformedArticles);
+      setEditableTitle(newsletter.title)
+      setEditableMessageTitle(newsletter.message)
+      setEditableMessage(newsletter.message_description)
+      setNewsLetterNo(newsletter.newsletter_no)
+    } catch (error: any) {
+      console.error("Error fetching articles:", error?.response?.data || error.message);
+      setPublishedArticles([]);
+      setArticleIds([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchArticles();
+    if (slug) {
+      fetchArticles();
+    } else {
+      fetchNewArticles()
+    }
+
   }, []);
 
   if (loading) {
@@ -137,14 +193,14 @@ function NewsletterPublishs() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
       <div className="max-w-7xl mx-auto bg-white border-1 border-blue-900 shadow-xl">
-        <header className="bg-[#171a39] text-white px-6 py-8 pb-11 flex justify-between rounded-lg items-center">
+        <header className="bg-[#171a39] text-white px-6 py-8 pb-11 flex justify-between rounded-lg items-center relative">
           <img src="/mainLogo.png" alt="Logo" className="h-24" />
           <div className="flex-1 text-center">
             <h1 className="text-5xl text-center font-bold font-serif">{editableTitle}</h1>
           </div>
           <div className="flex flex-col items-end">
             <span className="text-2xl font-bold">{currentDateFormatted}</span>
-            <span className="text-lg mt-3 font-medium text-gray-300 uppercase">{newsLetterNo}</span>
+            <span className="text-xs mt-3 font-medium text-gray-300 uppercase absolute bottom-5 right-5.2">Issue Number:{newsLetterNo}</span>
           </div>
         </header>
 
@@ -277,7 +333,7 @@ function NewsletterPublishs() {
                       <span>Source: TPI News</span>
                     </div>
                     <div>
-                      <a href={article.cta} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      <a href={article.cta_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                         {article.cta}
                       </a>
                     </div>

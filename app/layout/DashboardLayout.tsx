@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic } from "react-icons/fa";
+import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic, FaFileCsv } from "react-icons/fa";
 import { Loader2, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -22,6 +22,7 @@ interface SourceStatus {
   source_key: string;
   source_name: string;
   last_synced_at: string; // ISO date string (e.g., "2025-08-24T11:32:57Z")
+  csv_file: string;
 }
 interface ConversationTitle {
   id: string;
@@ -36,8 +37,14 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [status, setStatus] = useState<SourceStatus[] | null>(null);
+  console.log(status, "status")
 
-  const [conversationLoading, setConversationLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [elapsed, setElapsed] = useState(0); // seconds passed
+  const ESTIMATED_TIME = 15 * 60; // 15 mins in seconds
+
+  const [conversationLoading, setConversationLoading] = useState(true);
   const [sourceLoading, setSourceLoading] = useState<{ [key: string]: boolean }>({
     "Department of Veteran Affairs (DVA)": false,
     "Australian War Memorial (AWM)": false,
@@ -48,7 +55,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   const [conversationTitles, setConversationTitles] = useState<ConversationTitle[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [conversationError, setConversationError] = useState<string | null>(null);
-  const [fetchSourceStatusLoader, setFetchSourceStatusLoader] = useState(false)
+  const [fetchSourceStatusLoader, setFetchSourceStatusLoader] = useState(true)
   // Menu configuration
   const menuItems = [
     { name: "Home", icon: <FaHome />, path: "/dashboard" },
@@ -112,8 +119,51 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
     Cookies.remove("token")
     window.location.href = "/";
   };
-  const [loading, setLoading] = useState(false);
 
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}m ${s}s`;
+  };
+
+  const handleAutoGenerate = async () => {
+    setConfirmOpen(false);
+    setLoading(true);
+
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/auto-generate/article/3/`,
+        {},
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+          responseType: "blob", // if backend sends file
+        }
+      );
+
+      console.log("Generated Articles:", response);
+
+      // 🔽 File download trigger
+      const blob = new Blob([response.data], { type: "application/pdf" }); // adjust MIME type
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `generated-articles-${new Date().toISOString()}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      // refresh UI
+      route.refresh();
+    } catch (err) {
+      console.error("Error generating articles:", err);
+    }
+    setLoading(false);
+  };
   const fetchSourceStatus = async () => {
     setFetchSourceStatusLoader(true)
     const token = localStorage.getItem("token");
@@ -126,40 +176,13 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
       });
       console.log(res.data, "res.data")
       setStatus(res.data.sources);
+
     } catch (err: any) {
       console.error("Error fetching source status:", err.response?.data || err.message);
     } finally {
       setFetchSourceStatusLoader(false)
-
     }
   };
-
-  // Auto-generate API call
-  const handleAutoGenerate = async () => {
-    setLoading(true);
-    const token = localStorage.getItem("token");
-
-    try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/auto-generate/article/3/`,
-        {},
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      console.log("Generated Articles:", response.data);
-
-      // 🔄 Page reload
-      window.location.reload();
-    } catch (err) {
-      console.error("Error generating articles:", err);
-    }
-    setLoading(false);
-  };
-
 
   const fetchConversationTitles = async () => {
     setConversationLoading(true);
@@ -195,6 +218,39 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
     }
   };
 
+  const handleDownloadCSV = (sourceName: string, sourceKey: string) => {
+    // Example: Build CSV from the data in status
+    // You can call an API here instead if backend gives CSV
+
+    const source = status && status.find((s) => s.source_key === sourceKey);
+    if (!source) return;
+
+    // Define CSV headers
+    const headers = ["Source Name", "Source Key", "Last Synced At"];
+
+    // Define CSV row
+    const rows = [
+      [
+        source.source_name,
+        source.source_key,
+        new Date(source.last_synced_at).toLocaleString("en-GB"),
+      ],
+    ];
+
+    // Convert to CSV string
+    const csvContent =
+      [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+
+    // Create a Blob and trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${sourceName}_data.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -222,6 +278,17 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // timer effect
+  useEffect(() => {
+    let interval: any;
+    if (loading) {
+      setElapsed(0);
+      interval = setInterval(() => {
+        setElapsed((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
 
 
   return (
@@ -263,46 +330,63 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           <div>
             <p className="text-sm font-semibold text-gray-200 mb-2">Sources</p>
             <div className="space-y-2">
-              {fetchSourceStatusLoader ?
+              {fetchSourceStatusLoader ? (
                 <div className="flex justify-center items-center py-10">
                   <ImSpinner2 className="animate-spin w-6 h-6 text-blue-400" />
                   <span className="ml-2 text-gray-300 text-sm">Loading...</span>
-                </div> : <>    {status?.map((source, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-[#1f234b] rounded hover:bg-[#24294f]"
-                  >
-                    <div>
-                      <p className="text-xs font-medium">{source.source_name}</p>
-                      <p className="text-xs text-gray-400">
-                        Last Sync: {new Date(source.last_synced_at).toLocaleString("en-GB", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-
-                    </div>
-                    <button
-                      onClick={() => handleSyncClick(source.source_name, source.source_key)}
-                      disabled={sourceLoading[source.source_name]}
-                      className={`w-7 h-7 flex items-center justify-center rounded ${sourceLoading[source.source_name]
-                        ? "bg-blue-200"
-                        : "bg-[#004682] hover:bg-[#003366]"
-                        }`}
+                </div>
+              ) : (
+                <>
+                  {status?.map((source, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-[#1f234b] rounded hover:bg-[#24294f]"
                     >
-                      {sourceLoading[source.source_name] ? (
-                        <Loader2 className="w-4 h-4 text-white animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 text-white" />
-                      )}
-                    </button>
-                  </div>
-                ))}
+                      <div>
+                        <p className="text-xs font-medium">{source.source_name}</p>
+                        <p className="text-xs text-gray-400">
+                          Last Sync:{" "}
+                          {new Date(source.last_synced_at).toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {/* Download CSV Button */}
+                        <a
+                          href={source.csv_file}
+                          download
+                          className="w-7 h-7 flex items-center justify-center rounded bg-green-600 hover:bg-green-700"
+                          title="Download CSV"
+                        >
+                          <FaFileCsv className="w-4 h-4 text-white" />
+                        </a>
+
+                        {/* Sync Button */}
+                        <button
+                          onClick={() => handleSyncClick(source.source_name, source.source_key)}
+                          disabled={sourceLoading[source.source_name]}
+                          className={`w-7 h-7 flex items-center justify-center rounded ${sourceLoading[source.source_name]
+                            ? "bg-blue-200"
+                            : "bg-[#004682] hover:bg-[#003366]"
+                            }`}
+                        >
+                          {sourceLoading[source.source_name] ? (
+                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 text-white" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </>
-              }
+              )}
 
             </div>
           </div>
@@ -327,7 +411,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
                     return (
                       <div
                         key={c.id}
-                        onClick={() => getPrompts && getPrompts(shortName)}
+                        onClick={() => getPrompts && getPrompts(c.title)}
                         className="flex items-center justify-between p-3 bg-[#1f234b] rounded-lg cursor-pointer 
                 hover:bg-[#24294f] hover:scale-105 transition-all duration-200 ease-in-out
                 border-l-4 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg group"
@@ -383,7 +467,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
         {/* Logout at Bottom */}
         <div className="p-4 border-t border-gray-700 flex flex-col gap-4">
           <button
-            onClick={handleAutoGenerate}
+            onClick={() => setConfirmOpen(true)}
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 
                    hover:scale-105 hover:shadow-lg transition-all duration-300 text-white px-4 py-2 rounded disabled:opacity-70"
@@ -451,7 +535,14 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           </div>
 
           <div className="relative flex items-center space-x-4" ref={menuRef}>
-            <span>{userData?.username}</span>
+            <div className="flex flex-col items-end">
+              {/* Username */}
+              <span className="capitalize font-medium text-gray-800">
+                {userData?.username}
+              </span>
+              {/* Subtitle */}
+
+            </div>
 
             {/* Profile Icon */}
             <button
@@ -484,17 +575,60 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           {children}
         </main>
       </div>
-      {
-        loading && <div
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center
-            bg-black/40 backdrop-blur-md"
-        >
+      {confirmOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl w-96 text-center relative">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">
+              Are you sure?
+            </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Auto-generating articles may take <b>10–15 minutes</b> to finish.
+              Do you want to start now?
+            </p>
+
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 
+                  rounded-lg text-gray-700 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAutoGenerate}
+                className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 
+                  hover:scale-105 text-white rounded-lg font-medium shadow-md"
+              >
+                Yes, Start
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {loading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center
+          bg-black/40 backdrop-blur-md text-center px-4">
           <CgSpinner className="animate-spin text-white text-6xl mb-4" />
-          <p className="text-lg font-medium text-white drop-shadow">
+          <p className="text-lg font-medium text-white drop-shadow mb-2">
             Generating Articles...
           </p>
+
+          {/* Progress Info */}
+          <p className="text-sm text-gray-200">
+            Elapsed: {formatTime(elapsed)} | Est. {formatTime(ESTIMATED_TIME - elapsed > 0 ? ESTIMATED_TIME - elapsed : 0)} left
+          </p>
+
+          {/* Optional progress bar */}
+          <div className="w-64 bg-gray-700 rounded-full h-2 mt-3">
+            <div
+              className="bg-green-400 h-2 rounded-full transition-all"
+              style={{
+                width: `${Math.min((elapsed / ESTIMATED_TIME) * 100, 100)}%`,
+              }}
+            />
+          </div>
         </div>
-      }
+      )}
 
     </div>
   );

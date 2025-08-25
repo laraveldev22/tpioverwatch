@@ -8,7 +8,10 @@ import { ImSpinner2 } from "react-icons/im";
 import { IoMdAdd, IoMdClose } from "react-icons/io";
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
- 
+import { FaFacebook, FaInstagram } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
+import { triggerPageReload } from '@/lib/storageTrigger';
+
 interface FullArticle {
   id: string;
   title: string;
@@ -25,6 +28,7 @@ interface FullArticle {
   image_url: string;
   is_auto_generated?: boolean;
   conversation_session?: string;
+  cta_url?: string,
 }
 
 // Helper function to format date as DD-month-YYYY
@@ -50,17 +54,14 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   const [dynamicCode, setDynamicCode] = useState("");
   const [showPublishOptions, setShowPublishOptions] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-
   const [editableTitle, setEditableTitle] = useState("TPI Newsletter");
   const [editableMessageTitle, setEditableMessageTitle] = useState("Editor's Message");
   const [editableMessage, setEditableMessage] = useState(
     "Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
   );
+
   const [publishing, setPublishing] = useState(false);
-
-
   const { slug } = use(params);
-
   const currentDate = new Date();
   const expectedSlug = formatDateForSlug(currentDate);
 
@@ -96,6 +97,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
       return ""; // fallback to empty string if image fails
     }
   };
+
   const togglePlatform = (platform: string) => {
     setSelectedPlatforms((prev) =>
       prev.includes(platform)
@@ -180,6 +182,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
           tags: article.tags,
           created_at: article.updated_at || article.created_at,
           cta: article.cta || "",
+          cta_url: article.cta_url || ""
         }));
       const allArticleIds = transformedArticles.map((article: any) => article.id);
       setArticleIds(allArticleIds);
@@ -207,12 +210,14 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
         is_mail_send: selectedPlatforms.includes("mailchimp"),
       };
 
- const res=     await axios.post(
+      const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/newsletters/publish/`,
         payload,
         { headers: { Authorization: `Token ${token}` } }
       );
-       router.push(`/news-letter?slug=${res.data.newsletter.slug}`)
+      triggerPageReload("dashboard");
+      router.push(`/newsletter?slug=${res.data.newsletter.slug}`)
+
     } catch (error: any) {
       toast.error(error.response.data.error)
     } finally {
@@ -236,6 +241,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
     const code = `VO${now.getFullYear()}W${weekNumber}`;
     setDynamicCode(code);
   }, []);
+
   useEffect(() => {
     if (slug !== expectedSlug) {
       router.replace(`/${expectedSlug}`);
@@ -419,20 +425,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                       <span className="text-lg text-gray-800">{article.title}</span>
                     </li>
                   ))}
-                  {articleIds.length < 3 &&
-                    Array.from({ length: 3 - articleIds.length }).map((_, index) => (
-                      <li key={`empty-${index}`} className="flex items-center">
-                        <svg
-                          className="w-5 h-4 mr-3 flex-shrink-0 transform rotate-45 align-middle"
-                          fill="none"
-                          stroke="#A0AEC0"
-                          viewBox="0 0 8 8"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
-                        </svg>
-                        <span className="text-lg text-gray-500">Article Slot {articleIds.length + index + 1}: Empty</span>
-                      </li>
-                    ))}
+
                 </ul>
               </div>
             </section>
@@ -507,7 +500,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                         <span>Source: TPI News</span>
                       </div>
                       <div>
-                        <a href={article.cta} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        <a href={article.cta_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                           {article.cta}
                         </a>
                       </div>
@@ -521,7 +514,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
               <div className="bg-[#171a39] text-white p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
 
                 <div className="space-y-2">
-                  
+
                   <p className='text-lg'>Veterans Overwatch</p>
                   <p>171 Richmond Rd, Richmond SA 5033</p>
 
@@ -626,6 +619,8 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
             <h2 className="text-xl font-bold mb-4 text-center text-[#171a39]" >Also Publish To</h2>
 
+
+
             <div className="space-y-3">
               {/* ✅ Mailchimp (enabled) */}
               <label
@@ -644,35 +639,44 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                 <span className="text-gray-800 font-medium">Mailchimp</span>
               </label>
 
-              {/* 🚫 Social Media (disabled) */}
+              {/* 🚫 Facebook (disabled) */}
               <label className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-100 opacity-70 cursor-not-allowed">
-                <input
-                  type="checkbox"
-                  disabled
-                  className="accent-blue-600"
-                />
-                <Globe className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-600 font-medium">Social Media</span>
+                <input type="checkbox" disabled className="accent-blue-600" />
+                <FaFacebook className="w-5 h-5 text-gray-400" />
+                <span className="text-gray-600 font-medium">Facebook</span>
+                <span className="ml-auto text-sm text-gray-500 italic">Coming Soon</span>
+              </label>
+
+              {/* 🚫 X (disabled) */}
+              <label className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-100 opacity-70 cursor-not-allowed">
+                <input type="checkbox" disabled className="accent-blue-600" />
+                <FaXTwitter className="w-5 h-5 text-gray-400" />
+                <span className="text-gray-600 font-medium">X (Twitter)</span>
+                <span className="ml-auto text-sm text-gray-500 italic">Coming Soon</span>
+              </label>
+
+              {/* 🚫 Instagram (disabled) */}
+              <label className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-100 opacity-70 cursor-not-allowed">
+                <input type="checkbox" disabled className="accent-blue-600" />
+                <FaInstagram className="w-5 h-5 text-gray-400" />
+                <span className="text-gray-600 font-medium">Instagram</span>
                 <span className="ml-auto text-sm text-gray-500 italic">Coming Soon</span>
               </label>
 
               {/* 🚫 Other Platforms (disabled) */}
               <label className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-100 opacity-70 cursor-not-allowed">
-                <input
-                  type="checkbox"
-                  disabled
-                  className="accent-blue-600"
-                />
+                <input type="checkbox" disabled className="accent-blue-600" />
                 <Shield className="w-5 h-5 text-gray-400" />
                 <span className="text-gray-600 font-medium">Other Platforms</span>
                 <span className="ml-auto text-sm text-gray-500 italic">Coming Soon</span>
               </label>
             </div>
 
+
             {/* Confirm Publish Button */}
             <button
               onClick={handlePublishNewsletter}
-              disabled={ publishing}
+              disabled={publishing}
               className="mt-6 w-full h-11 flex items-center justify-center gap-2 bg-[#171a39] text-white rounded-lg shadow hover:bg-[#0f122a] transition disabled:opacity-50"
             >
               {publishing ? (

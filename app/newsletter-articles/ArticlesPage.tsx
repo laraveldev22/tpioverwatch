@@ -4,198 +4,297 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "../layout/DashboardLayout";
 import axios from "axios";
 import { FiEye, FiSearch } from "react-icons/fi";
+import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import { Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
 
-
-
 interface Article {
-    id: string;
-    title: string;
-    category: string;
-    byline: string;
-    is_newsletter: boolean; // for Published / Draft
-    created_at: string;
-    updated_at: string;
+  id: string;
+  title: string;
+  category: string;
+  byline: string;
+  is_newsletter: boolean; // for Published / Draft
+  created_at: string;
+  updated_at: string;
 }
+
 const articleCategories = {
-    A: "Feature Story",
-    B: "Data/Report Summary",
-    C: "Events & Commemoration",
-    D: "Historical or Cultural Insight",
-}
+  A: "Feature Story",
+  B: "Data/Report Summary",
+  C: "Events & Commemoration",
+  D: "Historical or Cultural Insight",
+};
+
 const ArticlesPage = () => {
-    const [articles, setArticles] = useState<Article[]>([]);
-    const [search, setSearch] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [title, setTitle] = useState()
-    const route = useRouter()
-    const searchParams = useSearchParams();
-    const newsletterId = searchParams.get("newsletter"); // ✅ this gives your ID
-    const itemsPerPage = 5;
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [title, setTitle] = useState<string>();
+  const [sortKey, setSortKey] = useState<keyof Article>("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-    // Fetch articles from API
-    const fetchArticles = async (newsletterId: string | number) => {
-        setLoading(true);
+  const route = useRouter();
+  const searchParams = useSearchParams();
+  const newsletterId = searchParams.get("newsletter");
+  const itemsPerPage = 5;
 
-        const token = localStorage.getItem("token");
-        if (!token) {
-            setLoading(false);
-            return;
+  // Fetch articles from API
+  const fetchArticles = async (newsletterId: string | number) => {
+    setLoading(true);
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/newsletters/articles/`,
+        { newsletter_id: newsletterId },
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
         }
+      );
 
-        try {
-            const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/newsletters/articles/`,
-                { newsletter_id: newsletterId }, // send ID in body
-                {
-                    headers: {
-                        Authorization: `Token ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                }
-            );
+      setArticles(response?.data?.articles || []);
+      setTitle(response?.data.newsletter_title);
+    } catch (error) {
+      console.error("Error fetching articles:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            console.log(response.data, "response");
-            setArticles(response?.data?.articles || []); // ✅ adjust based on API response
-            setTitle(response?.data.newsletter_title)
-        } catch (error) {
-            console.error("Error fetching articles:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-    ;
+  useEffect(() => {
+    if (newsletterId) fetchArticles(newsletterId);
+  }, [newsletterId]);
 
-    useEffect(() => {
-        if (newsletterId) fetchArticles(newsletterId);
-    }, []);
+  // Sorting logic
+  const handleSort = (key: keyof Article) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortOrder("asc");
+    }
+  };
 
+  const sorted = [...articles].sort((a, b) => {
+    let valA: string | number | boolean = a[sortKey] as any;
+    let valB: string | number | boolean = b[sortKey] as any;
 
-    // Filter articles safely
-    const filteredArticles: Article[] = Array.isArray(articles)
-        ? articles.filter((article) =>
-            article.title.toLowerCase().includes(search.toLowerCase())
-        )
-        : [];
+    if (sortKey === "created_at" || sortKey === "updated_at") {
+      valA = new Date(a[sortKey] as string).getTime();
+      valB = new Date(b[sortKey] as string).getTime();
+    }
+    if (sortKey === "title" || sortKey === "byline" || sortKey === "category") {
+      valA = (valA as string)?.toLowerCase();
+      valB = (valB as string)?.toLowerCase();
+    }
+    if (sortKey === "is_newsletter") {
+      valA = a.is_newsletter ? 1 : 0;
+      valB = b.is_newsletter ? 1 : 0;
+    }
 
-    // Pagination
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const paginatedArticles: Article[] = filteredArticles.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredArticles.length / itemsPerPage);
+    if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
+  // Filter & Pagination
+  const filteredArticles: Article[] = sorted.filter((article) =>
+    article.title.toLowerCase().includes(search.toLowerCase())
+  );
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const paginatedArticles: Article[] = filteredArticles.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredArticles.length / itemsPerPage);
 
-    return (
-        <DashboardLayout>
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-                <h2 className="text-2xl font-bold text-[#171a39] capitalize">Articles in {title}</h2>
-
-                <div className="relative max-w-sm w-full">
-                    <input
-                        type="text"
-                        placeholder="Search articles..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#e8be5a] focus:border-[#e8be5a] transition"
-                    />
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <FiSearch className="h-5 w-5" />
-                    </span>
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto bg-white shadow rounded-lg">
-                {loading ? (
-                    <div className="flex justify-center items-center py-10 h-full">
-                        <Loader2 className="animate-spin h-8 w-8 text-[#e8be5a]" />
-                    </div>
-                ) : filteredArticles.length === 0 ? (
-                    <div className="flex justify-center items-center py-10 text-gray-500">
-                        No articles found.
-                    </div>
-                ) : (
-                    <table className="min-w-full divide-y divide-gray-200 table-fixed">
-                        <thead className="bg-[#171a39] text-white">
-                            <tr>
-                                <th className="w-1/4 px-6 py-3 text-left text-sm font-medium uppercase">Title</th>
-                                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Category</th>
-                                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Status</th>
-                                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Byline</th>
-                                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Created</th>
-                                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Updated</th>
-                                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">Action</th>
-
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {paginatedArticles.map((article) => (
-                                <tr
-                                    key={article.id}
-                                    className="hover:bg-[#fef3c7] transition-colors duration-200 cursor-pointer"
-                                >
-                                    <td onClick={() => route.push(`/news-letter-view?id=${article.id}&newsletterId=${newsletterId}`)} className="px-6 cursor-pointer py-4 text-sm text-gray-700 max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
-                                        {article.title}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 truncate">  {articleCategories[article.category as keyof typeof articleCategories] || article.category}</td>
-                                    <td className="px-6 py-4 text-sm">
-                                        <span
-                                            className={`px-2 py-1 rounded-full text-white font-semibold text-xs ${article.is_newsletter ? "bg-green-500" : "bg-yellow-500"
-                                                }`}
-                                        >
-                                            {article.is_newsletter ? "Published" : "Draft"}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-700 truncate">{article.byline}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 truncate">
-                                        {new Date(article.created_at).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 truncate">
-                                        {new Date(article.updated_at).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-700 flex gap-2 flex justify-center">
-                                        <button
-                                            onClick={() => route.push(`/news-letter-view?id=${article.id}&newsletterId=${newsletterId}`)}
-                                            className="text-blue-600 hover:text-blue-800 transition"
-                                            title="View"
-                                        >
-                                            <FiEye size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-
-            {/* Pagination */}
-            {filteredArticles.length > itemsPerPage && (
-                <div className="flex justify-end mt-4 gap-2">
-                    <button
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-                    >
-                        Prev
-                    </button>
-                    <span className="px-3 py-1">{currentPage} / {totalPages}</span>
-                    <button
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
-        </DashboardLayout>
+  const renderSortIcon = (key: keyof Article) => {
+    if (sortKey !== key) return <FaSort className="inline ml-1" />;
+    return sortOrder === "asc" ? (
+      <FaSortUp className="inline ml-1" />
+    ) : (
+      <FaSortDown className="inline ml-1" />
     );
+  };
+
+  return (
+    <DashboardLayout>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <h2 className="text-2xl font-bold text-[#171a39] capitalize">
+          Articles in {title}
+        </h2>
+
+        <div className="relative max-w-sm w-full">
+          <input
+            type="search"
+            placeholder="Search articles..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#e8be5a] focus:border-[#e8be5a] transition"
+          />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <FiSearch className="h-5 w-5" />
+          </span>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto bg-white shadow rounded-lg">
+        {loading ? (
+          <div className="flex justify-center items-center py-10 h-full">
+            <Loader2 className="animate-spin h-8 w-8 text-[#e8be5a]" />
+          </div>
+        ) : filteredArticles.length === 0 ? (
+          <div className="flex justify-center items-center py-10 text-gray-500">
+            No articles found.
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200 table-fixed">
+            <thead className="bg-[#171a39] text-white">
+              <tr>
+                <th
+                  className="w-1/4 px-6 py-3 text-left text-sm font-medium uppercase cursor-pointer"
+                  onClick={() => handleSort("title")}
+                >
+                  Title {renderSortIcon("title")}
+                </th>
+                <th
+                  className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase cursor-pointer"
+                  onClick={() => handleSort("category")}
+                >
+                  Category {renderSortIcon("category")}
+                </th>
+                <th
+                  className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase cursor-pointer"
+                  onClick={() => handleSort("is_newsletter")}
+                >
+                  Status {renderSortIcon("is_newsletter")}
+                </th>
+                <th
+                  className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase cursor-pointer"
+                  onClick={() => handleSort("byline")}
+                >
+                  Byline {renderSortIcon("byline")}
+                </th>
+                <th
+                  className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase cursor-pointer"
+                  onClick={() => handleSort("created_at")}
+                >
+                  Created {renderSortIcon("created_at")}
+                </th>
+                <th
+                  className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase cursor-pointer"
+                  onClick={() => handleSort("updated_at")}
+                >
+                  Updated {renderSortIcon("updated_at")}
+                </th>
+                <th className="w-1/6 px-6 py-3 text-left text-sm font-medium uppercase">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {paginatedArticles.map((article) => (
+                <tr
+                  key={article.id}
+                  className="hover:bg-[#fef3c7] transition-colors duration-200 cursor-pointer"
+                >
+                  <td
+                    onClick={() =>
+                      window.open(
+                        `/news-letter-view?id=${article.id}&newsletterId=${newsletterId}`,
+                        "_blank"
+                      )
+                    }
+                    className="px-6 py-4 text-sm text-gray-700 max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap"
+                  >
+                    {article.title}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 truncate">
+                    {
+                      articleCategories[
+                        article.category as keyof typeof articleCategories
+                      ] || article.category
+                    }
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span
+                      className={`px-2 py-1 rounded-full text-white font-semibold text-xs ${
+                        article.is_newsletter ? "bg-green-500" : "bg-yellow-500"
+                      }`}
+                    >
+                      {article.is_newsletter ? "Published" : "Draft"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700 truncate">
+                    {article.byline}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 truncate">
+                    {new Date(article.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 truncate">
+                    {new Date(article.updated_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700 flex justify-center">
+                    <button
+                      onClick={() =>
+                        window.open(
+                          `/news-letter-view?id=${article.id}&newsletterId=${newsletterId}`,
+                          "_blank"
+                        )
+                      }
+                      className="text-blue-600 hover:text-blue-800 transition"
+                      title="View"
+                    >
+                      <FiEye size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {filteredArticles.length > itemsPerPage && (
+        <div className="flex justify-end mt-4 gap-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span className="px-3 py-1">
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
+    </DashboardLayout>
+  );
 };
 
 export default ArticlesPage;
