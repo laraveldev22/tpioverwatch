@@ -2,7 +2,7 @@
 import React, { RefObject } from 'react'
 import DashboardLayout from '../layout/DashboardLayout'
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Edit3, Send, Trash2 } from "lucide-react";
+import { CheckCircle, Edit3, Loader2, Send, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
@@ -69,7 +69,6 @@ const page = () => {
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
-    console.log(token, "token")
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [currentArticle, setCurrentArticle] = useState<FullArticle | null>(null);
@@ -105,6 +104,8 @@ const page = () => {
     const [refetch, setRefetch] = useState(0)
     const [newslettReFetch, setNewsletterReFetch] = useState(0)
     const [articlesLoading, setArticlesLoading] = useState(true)
+    const [validating, setValidating] = useState(false);
+    const [isValidUrl, setIsValidUrl] = useState<null | boolean>(null);
 
     // Attach the click-outside handler for each editable field
     //@ts-ignore
@@ -169,7 +170,37 @@ const page = () => {
 
     const clearError = useCallback(() => setTimeout(() => setError(null), 5000), []);
 
+  // regex + ajax validation
+  const validateUrl = async (url: string) => {
+    if (!url) {
+      setIsValidUrl(null);
+      return;
+    }
 
+    // Step 1: regex format check
+    const urlPattern = new RegExp(
+      "^(https?:\\/\\/)?" + // protocol
+      "((([a-zA-Z0-9\\-])+\\.)+[a-zA-Z]{2,})" + // domain
+      "(\\:[0-9]{1,5})?" + // port
+      "(\\/.*)?$" // path
+    );
+    if (!urlPattern.test(url)) {
+      setIsValidUrl(false);
+      return;
+    }
+
+    // Step 2: ajax check (HEAD request)
+    setValidating(true);
+    try {
+      const res = await fetch(url, { method: "HEAD", mode: "no-cors" });
+      // "no-cors" won’t give status, so just assume reachable
+      setIsValidUrl(true);
+    } catch (err) {
+      setIsValidUrl(false);
+    } finally {
+      setValidating(false);
+    }
+  };
     const fetchArticleDetails = useCallback(async (articleId: string) => {
         if (!token) return null;
         setArticleDetailLoading(true);
@@ -534,6 +565,7 @@ const page = () => {
                 category: currentArticle?.category || selectedCategory,
                 is_newsletter: currentArticle?.is_newsletter ? 1 : 0,
                 image_url: currentArticle?.image_url || "",
+                cta_url: editedCtaLink,
             };
             if (currentArticle) {
                 response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${currentArticle.id}/`, {
@@ -1450,12 +1482,49 @@ const page = () => {
 
                                 <div className="mt-4">
                                     {isEditingCtaLink ? (
-                                        <div className="space-y-2">
-                                            <Input ref={ctaRef} value={editedCtaLink} onChange={(e) => setEditedCtaLink(e.target.value)} className="border-2 border-blue-300 focus:border-blue-500" placeholder="Enter CTA link..." disabled={isDeleting || articleSaving} />
+                                        <div className="space-y-2 relative">
+                                            <Input
+                                                ref={ctaRef}
+                                                value={editedCtaLink}
+                                                onChange={(e) => {
+                                                    setEditedCtaLink(e.target.value);
+                                                    validateUrl(e.target.value);
+                                                }}
+                                                className={`border-2 ${isValidUrl === false
+                                                    ? "border-red-400 focus:border-red-600"
+                                                    : isValidUrl === true
+                                                        ? "border-green-400 focus:border-green-600"
+                                                        : "border-blue-300 focus:border-blue-500"
+                                                    }`}
+                                                placeholder="Enter CTA link..."
+                                                disabled={isDeleting || articleSaving}
+                                            />
+
+                                            {/* Validation status */}
+                                            <div className="absolute top-2 right-2">
+                                                {validating && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                                                {!validating && isValidUrl === true && (
+                                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                                )}
+                                                {!validating && isValidUrl === false && (
+                                                    <XCircle className="w-4 h-4 text-red-500" />
+                                                )}
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors" onClick={() => setIsEditingCtaLink(true)}>
-                                            <a href={editedCtaLink} target="_blank" rel="noopener noreferrer" className="text-blue-800  hover:text-blue-800 text-sm hover:underline block" onClick={(e) => e.preventDefault()}>{editedCtaLink || "Click to add CTA link..."}</a>
+                                        <div
+                                            className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors"
+                                            onClick={() => setIsEditingCtaLink(true)}
+                                        >
+                                            <a
+                                                href={editedCtaLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-800 hover:text-blue-800 text-sm hover:underline block"
+                                                onClick={(e) => e.preventDefault()}
+                                            >
+                                                {editedCtaLink || "Click to add CTA link..."}
+                                            </a>
                                             <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
                                         </div>
                                     )}
