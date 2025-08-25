@@ -311,10 +311,6 @@ const NewsletterPDF: React.FC<NewsletterPDFProps> = ({
                         </View>
                     ))
                 }
-
-
-
-
             </View>
 
         </View>

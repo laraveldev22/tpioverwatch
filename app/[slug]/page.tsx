@@ -59,7 +59,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
   const [editableMessage, setEditableMessage] = useState(
     "Welcome to our newsletter — a space dedicated to informing, honouring, and connecting Australia’s totally and permanently incapacitated veterans, along with their families and support networks. Each edition is crafted to share trusted updates, celebrate service, and preserve the stories that define our community. Thank you for allowing us to be part of your journey."
   );
-
+  const [account, setAccount] = useState<any | null>(null);
   const [publishing, setPublishing] = useState(false);
   const { slug } = use(params);
   const currentDate = new Date();
@@ -225,6 +225,29 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
     }
   };
 
+
+  const getMailchimpAccount = async () => {
+    try {
+      const token = localStorage.getItem("token"); // if authentication required
+
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/mailchimp/account/`,
+        {
+          headers: {
+            Authorization: `Token ${token}`, // optional, remove if not needed
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Mailchimp Account Data:", response.data);
+      setAccount(response.data.data)
+    } catch (error) {
+      console.error("Error fetching Mailchimp account:", error);
+      throw error;
+    }
+  };
+
   // If you want it to generate dynamically based on some logic:
   useEffect(() => {
     const getWeekNumber = (date: Date) => {
@@ -258,8 +281,11 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
     }
   }, [slug, router]);
 
+
+
   useEffect(() => {
     fetchArticles();
+    getMailchimpAccount()
   }, []);
 
   if (loading) {
@@ -619,8 +645,6 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
 
             <h2 className="text-xl font-bold mb-4 text-center text-[#171a39]" >Also Publish To</h2>
 
-
-
             <div className="space-y-3">
               {/* ✅ Mailchimp (enabled) */}
               <label
@@ -636,7 +660,7 @@ export default function NewsletterPublish({ params }: { params: Promise<{ slug: 
                   className="accent-blue-600"
                 />
                 <Mail className="w-5 h-5 text-blue-600" />
-                <span className="text-gray-800 font-medium">Mailchimp</span>
+                <span className="text-gray-800 font-medium">Mailchimp  <span className='text-xs font-light'>({account.account_name})</span> </span>
               </label>
 
               {/* 🚫 Facebook (disabled) */}
