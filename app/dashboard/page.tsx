@@ -69,6 +69,7 @@ const page = () => {
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
+    console.log(token, "token")
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [currentArticle, setCurrentArticle] = useState<FullArticle | null>(null);
@@ -631,8 +632,8 @@ const page = () => {
                 throw new Error(`Failed to update article ${currentArticle.id} newsletter status`);
             }
             const savedArticle = await response.json();
-             
-            
+
+
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article published successfully!");
             setNewsletterReFetch((prev) => prev + 1);
@@ -652,7 +653,7 @@ const page = () => {
 
         if (!currentArticle || !token) {
             setError("No article selected or authentication required");
-     
+
             return;
         }
 
@@ -676,7 +677,7 @@ const page = () => {
                 throw new Error("Failed to update article newsletter status");
             }
             const savedArticle = await response.json();
-            
+
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article unpublished successfully!");
             setNewsletterReFetch((prev) => prev + 1);
@@ -897,7 +898,7 @@ const page = () => {
 
 
     const remove = async (item: Article) => {
-        const token = localStorage.setItem("token")
+
         handleUnpublish()
         try {
             const updatedArticle = { ...currentArticle, is_newsletter: 0 };
@@ -918,7 +919,7 @@ const page = () => {
                 throw new Error("Failed to update article newsletter status");
             }
             const savedArticle = await response.json();
-            
+
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article unpublished successfully!");
             setTimeout(() => setSaveSuccess(null), 2000);
@@ -1025,7 +1026,7 @@ const page = () => {
         if (savedPublishedIds) {
             try {
                 const parsedIds = JSON.parse(savedPublishedIds);
-                
+
             } catch (err) {
                 console.error("Error parsing publishedArticleIds from localStorage:", err);
                 localStorage.setItem("publishedArticleIds", JSON.stringify([]));
@@ -1034,6 +1035,11 @@ const page = () => {
             localStorage.setItem("publishedArticleIds", JSON.stringify([]));
         }
     }, [router]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+        setToken(token)
+    }, [])
 
 
 
@@ -1519,7 +1525,7 @@ const page = () => {
 
                                 </div>
                             </div>
-                            
+
                         </div>
                     </div>
 
