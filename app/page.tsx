@@ -47,7 +47,8 @@ export default function SignInPage() {
       }
       localStorage.setItem("token", data.token)
 
-      Cookies.set("token", data.token, { expires: 1, path: "/" });
+      const expiryDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+      Cookies.set("token", data.token, { expires: expiryDate, path: "/" });
       toast.success("Login successful 🎉");
       router.push("/dashboard");
     } catch (err) {
