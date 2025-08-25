@@ -648,6 +648,7 @@ const page = () => {
     };
 
     const handleUnpublish = async () => {
+          localStorage.getItem("token");
         if (!currentArticle || !token) {
             setError("No article selected or authentication required");
             clearError();
