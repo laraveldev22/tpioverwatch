@@ -45,10 +45,8 @@ export default function SignInPage() {
         toast.error(error || "Login failed ❌");
         return;
       }
-      localStorage.setItem("token", data.token)
+      Cookies.set("token", data.token, { expires: 7, path: "/" });
 
-      const expiryDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
-      Cookies.set("token", data.token, { expires: expiryDate, path: "/" });
       toast.success("Login successful 🎉");
       router.push("/dashboard");
     } catch (err) {
