@@ -141,7 +141,7 @@ function NewsletterPublishs() {
         created_at: article.updated_at || article.created_at || new Date().toISOString(),
         cta: article.cta || "",
         cta_url :article.article||"",
-         cta: article.cta || "",
+        
       }));
       const allArticleIds = transformedArticles.map((a: any) => a.id);
       setArticleIds(allArticleIds);
@@ -245,20 +245,7 @@ function NewsletterPublishs() {
                     <span className="text-lg text-gray-800  ">{article.title}</span>
                   </li>
                 ))}
-                {articleIds.length < 3 &&
-                  Array.from({ length: 3 - articleIds.length }).map((_, index) => (
-                    <li key={`empty-${index}`} className="flex items-center">
-                      <svg
-                        className="w-5 h-4 mr-3 flex-shrink-0 transform rotate-45 align-middle"
-                        fill="none"
-                        stroke="#A0AEC0"
-                        viewBox="0 0 8 8"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1 4h5M4 1l3 3-3 3" />
-                      </svg>
-                      <span className="text-lg text-gray-500">Article Slot {articleIds.length + index + 1}: Empty</span>
-                    </li>
-                  ))}
+                 
               </ul>
             </div>
           </section>
