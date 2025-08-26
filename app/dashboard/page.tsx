@@ -14,8 +14,10 @@ import axios from 'axios';
 import { FaEye, FaFilePdf, FaGripVertical, FaTrash } from 'react-icons/fa';
 import { CgSpinner } from "react-icons/cg";
 import { FiMail } from 'react-icons/fi';
-
+import { v4 as uuidv4 } from "uuid"; // if using uuid library
 import toast from "react-hot-toast";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
+
 
 const articleCategories = {
     A: "Feature Story",
@@ -37,7 +39,7 @@ interface Article {
     quote_block?: string
     cta?: string
     tags?: string
-    image_url?: string
+    image_url: string
 }
 
 interface FullArticle extends Article {
@@ -84,6 +86,7 @@ const page = () => {
     const [isEditingQuoteBlock, setIsEditingQuoteBlock] = useState(false);
     const [isEditingCta, setIsEditingCta] = useState(false);
     const [isEditingCtaLink, setIsEditingCtaLink] = useState(false);
+
     const [editedTitle, setEditedTitle] = useState("");
     const [editedByline, setEditedByline] = useState("");
     const [editedLeadParagraph, setEditedLeadParagraph] = useState("");
@@ -93,6 +96,7 @@ const page = () => {
     const [editedCta, setEditedCta] = useState("");
     const [editedCtaLink, setEditedCtaLink] = useState("");
     const [editedTags, setEditedTags] = useState("");
+
     const [newsletters, setNewsLetters] = useState<Article[]>([]);
     const titleRef = useRef<HTMLTextAreaElement>(null);
     const bylineRef = useRef<HTMLInputElement>(null);
@@ -106,8 +110,29 @@ const page = () => {
     const [articlesLoading, setArticlesLoading] = useState(true)
     const [validating, setValidating] = useState(false);
     const [isValidUrl, setIsValidUrl] = useState<null | boolean>(null);
+    const [imgLoading, setImgLoading] = useState(false);
+    const [articleData, setArticleData] = useState<{ [key: string]: Article[] }>({
+        A: [], B: [], C: [], D: [],
+    });
+    const [articleLoading, setArticleLoading] = useState<{ [key: string]: boolean }>({
+        A: false, B: false, C: false, D: false,
+    });
+    const [articleError, setArticleError] = useState<{ [key: string]: string | null }>({
+        A: null, B: null, C: null, D: null,
+    });
+    const [articleDetailLoading, setArticleDetailLoading] = useState(false);
+    const [articleDetailError, setArticleDetailError] = useState<string | null>(null);
+    const [newsletterLoader, setnewsLetterLoader] = useState(true)
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-    // Attach the click-outside handler for each editable field
+    const [validation, setValidation] = useState({
+        title: "",
+        image: "",
+        byline: "",
+        lead: "",
+        content: "",
+    });
+
     //@ts-ignore
     useClickOutside(titleRef, () => setIsEditingTitle(false));
     //@ts-ignore
@@ -126,23 +151,25 @@ const page = () => {
     //@ts-ignore
     useClickOutside(ctaRef, () => setIsEditingCtaLink(false));
 
-    const [newsletterLoader, setnewsLetterLoader] = useState(true)
-    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-    const [articleData, setArticleData] = useState<{ [key: string]: Article[] }>({
-        A: [], B: [], C: [], D: [],
-    });
-    const [articleLoading, setArticleLoading] = useState<{ [key: string]: boolean }>({
-        A: false, B: false, C: false, D: false,
-    });
-    const [articleError, setArticleError] = useState<{ [key: string]: string | null }>({
-        A: null, B: null, C: null, D: null,
-    });
-    const [articleDetailLoading, setArticleDetailLoading] = useState(false);
-    const [articleDetailError, setArticleDetailError] = useState<string | null>(null);
 
     const router = useRouter();
+    // On save validation
+    const validateBeforeSave = () => {
+        let valid = true;
+        const newValidation: typeof validation = { title: "", image: "", byline: "", lead: "", content: "" };
 
+        if (!editedTitle.trim()) { newValidation.title = "Title is required"; valid = false; }
+        else if (editedTitle.length > 100) { newValidation.title = "Title cannot exceed 100 characters"; valid = false; }
+
+        // if (!currentArticle?.image_url || currentArticle.image_url.trim() === "") { newValidation.image = "Article image is required"; valid = false; }
+        if (!editedByline.trim()) { newValidation.byline = "Byline is required"; valid = false; }
+        if (!editedLeadParagraph.trim()) { newValidation.lead = "Lead paragraph is required"; valid = false; }
+        if (!editedContent.trim()) { newValidation.content = "Main content is required"; valid = false; }
+
+        setValidation(newValidation);
+        return valid;
+    };
     const calculateTotalWordCount = useMemo(() => {
         const allContent = [
             editedTitle, editedByline, editedLeadParagraph, editedContent,
@@ -167,6 +194,7 @@ const page = () => {
         }
         return [];
     }, []);
+
 
     const clearError = useCallback(() => setTimeout(() => setError(null), 5000), []);
 
@@ -272,8 +300,13 @@ const page = () => {
     };
 
     const handleImageUpload = async (file: File) => {
-        if (!currentArticle || !token) {
-            setError("No article selected or authentication required");
+
+        if (!file) {
+            setValidation(prev => ({ ...prev, image: "Please upload an image" }));
+            return;
+        }
+        if (!token) {
+            setError("Authentication required");
             clearError();
             return;
         }
@@ -287,117 +320,97 @@ const page = () => {
             clearError();
             return;
         }
+        // Clear previous image error
+        setValidation(prev => ({ ...prev, image: "" }));
         setArticleSaving(true);
         setSaveSuccess(null);
-        try {
-            // Delete the old image from Cloudinary if it exists
-            if (currentArticle.image_url) {
-                const publicId = `article_${currentArticle.id}`; // Adjust based on your public_id format
-                const cloudName = "dlimmmixo";
-                const apiKey = '696744466887184';
-                const apiSecret = '5_s0xrwgyBcnT1FROOvGH5CasmU';
-                const timestamp = Math.round(new Date().getTime() / 1000);
-                // const signature = await generateCloudinarySignature(publicId, timestamp, apiSecret);
+        setImgLoading(true);   // 👈 start loader
 
-                const destroyResponse = await fetch(
-                    `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            public_id: publicId,
-                            api_key: apiKey,
-                            // signature: signature,
-                            timestamp: timestamp,
-                        }),
+        try {
+            // If an image exists, try deleting it first
+            if (currentArticle?.image_url) {
+                const oldPublicId = currentArticle.image_url
+                    ?.split("/") // break URL
+                    ?.pop()      // get last part
+                    ?.split(".")[0]; // remove extension
+
+                if (oldPublicId) {
+                    const cloudName = "dlimmmixo";
+                    const apiKey = "696744466887184";
+                    const timestamp = Math.round(new Date().getTime() / 1000);
+
+                    const destroyResponse = await fetch(
+                        `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                public_id: oldPublicId,
+                                api_key: apiKey,
+                                timestamp,
+                            }),
+                        }
+                    );
+
+                    if (!destroyResponse.ok) {
+                        console.warn("Failed to delete old image, continuing with upload");
                     }
-                );
-                if (!destroyResponse.ok) {
-                    console.warn("Failed to delete old image from Cloudinary, proceeding with upload");
                 }
             }
 
-            // Upload the new image with a unique public_id
+            // Upload new image with unique ID
             const formData = new FormData();
             formData.append("file", file);
             formData.append("upload_preset", "tpi-overwatch-v2");
-            const uniqueId = Date.now();
-            formData.append("public_id", `article_${currentArticle.id}_${uniqueId}`);
+
+            // ✅ dynamic unique ID
+            const uniqueId = `${uuidv4()}_${Date.now()}`;
+            formData.append("public_id", `article_${uniqueId}`);
             formData.append("folder", "tpi");
 
-            const cloudinaryResponse = await fetch(
+            const uploadResponse = await fetch(
                 "https://api.cloudinary.com/v1_1/dlimmmixo/image/upload",
                 { method: "POST", body: formData }
             );
-            if (!cloudinaryResponse.ok) {
-                const errorData = await cloudinaryResponse.json();
-                throw new Error(`Cloudinary upload failed: ${errorData.error?.message || "Unknown error"}`);
-            }
-            const cloudinaryData = await cloudinaryResponse.json();
 
-            const imageUrl = `${cloudinaryData.secure_url}?v=${uniqueId}`;
-            const articleData = { ...currentArticle, image_url: imageUrl };
-            const updateResponse = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/articles/${currentArticle.id}/`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
-                    body: JSON.stringify(articleData),
-                }
-            );
-            if (!updateResponse.ok) throw new Error("Failed to update article with image URL");
-            const updatedArticle = await updateResponse.json();
+            if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
+                throw new Error(
+                    `Cloudinary upload failed: ${errorData.error?.message || "Unknown error"}`
+                );
+            }
+
+            const uploadedData = await uploadResponse.json();
+            const imageUrl = `${uploadedData.secure_url}?v=${Date.now()}`;
+
+            // Update state
+
+            const updatedArticle = { ...currentArticle, image_url: imageUrl };
+            //@ts-ignore
             setCurrentArticle(updatedArticle);
-            setSaveSuccess("Image uploaded successfully!");
+            toast.success("Image uploaded successfully!");
             setTimeout(() => setSaveSuccess(null), 3000);
         } catch (err) {
-            setError(`Failed to upload image: ${err instanceof Error ? err.message : "Unknown error"}`);
+            setError(
+                `Failed to upload image: ${err instanceof Error ? err.message : "Unknown error"
+                }`
+            );
             clearError();
             console.error("Error uploading image:", err);
         } finally {
             setArticleSaving(false);
+            setImgLoading(false);   // 👈 stop loader
         }
     };
 
     const handleImageDelete = async () => {
-        if (!currentArticle || !token) {
-            setError("No article selected or authentication required");
-            clearError();
-            return;
-        }
-        if (!currentArticle.image_url) {
-            setError("No image to delete");
-            clearError();
-            return;
-        }
         setArticleSaving(true);
         setSaveSuccess(null);
         try {
             const articleData = { ...currentArticle, image_url: "" };
-            const updateResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${currentArticle.id}/`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
-                body: JSON.stringify(articleData),
-            });
-            if (!updateResponse.ok) {
-                if (updateResponse.status === 401) {
-                    setError("Authentication failed. Please log in again.");
-                    clearError();
-                    localStorage.removeItem("token");
-                    setToken(null);
-                    router.push("/");
-                    return;
-                }
-                if (updateResponse.status === 404) {
-                    setError("Article not found");
-                    clearError();
-                    return;
-                }
-                throw new Error("Failed to update article");
-            }
-            const updatedArticle = await updateResponse.json();
-            setCurrentArticle(updatedArticle);
-            setSaveSuccess("Image deleted successfully!");
+            //@ts-ignore
+            setCurrentArticle(articleData);
+            toast.success("Image deleted successfully!");
             setTimeout(() => setSaveSuccess(null), 3000);
         } catch (err) {
             setError(`Failed to delete image: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -549,6 +562,12 @@ const page = () => {
             clearError();
             return;
         }
+
+        if (!validateBeforeSave()) {
+            toast.error("Please fix validation errors before saving");
+            return;
+        }
+
         setArticleSaving(true);
         setSaveSuccess(null);
         try {
@@ -607,6 +626,7 @@ const page = () => {
             setIsEditingQuoteBlock(false);
             setIsEditingCta(false);
             setTimeout(() => setSaveSuccess(null), 3000);
+            toast.success("Article saved successfully!");
             fetchArticles();
         } catch (err) {
             toast.error("Ensure this field has no more than 100 characters.");
@@ -624,7 +644,7 @@ const page = () => {
             return;
         }
         if (!currentArticle) {
-            setError("No article selected to publish");
+            toast.error("No article selected to publish");
             clearError();
             return;
         }
@@ -675,7 +695,7 @@ const page = () => {
             setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
             clearError();
             console.error("Error publishing article:", err);
-             toast.error("Newsletter Added successfully!");
+            toast.error("Newsletter Added successfully!");
         } finally {
             setArticleSaving(false);
         }
@@ -686,7 +706,6 @@ const page = () => {
 
         if (!currentArticle || !token) {
             setError("No article selected or authentication required");
-
             return;
         }
 
@@ -892,11 +911,9 @@ const page = () => {
     const fetchNewsletters = async () => {
         setnewsLetterLoader(true);
 
-        const token =
-            typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
         if (!token) {
-
             setnewsLetterLoader(false);
             return;
         }
@@ -930,7 +947,6 @@ const page = () => {
     };
 
     const remove = async (item: Article) => {
-
         handleUnpublish()
         try {
             const updatedArticle = { ...currentArticle, is_newsletter: 0 };
@@ -1236,7 +1252,6 @@ const page = () => {
                             <h2 className="text-lg lg:text-xl font-semibold">ARTICLE SHELF</h2>
                             <p className="text-xs lg:text-sm text-gray-300 mt-1">Click an article to see it in the Article Frame</p>
                         </div>
-
                         {
                             articlesLoading ? (
                                 <div className="w-full flex items-center justify-center py-6">
@@ -1275,19 +1290,20 @@ const page = () => {
                                                                 return (
                                                                     <div
                                                                         key={article.id}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleArticleClick(article);
+                                                                        }}
                                                                         className={`shadow-sm p-3 rounded-lg text-xs cursor-pointer transition-all duration-200 border ${currentArticle?.id === article.id
-                                                                                ? "bg-[#22264f] text-white border-[#171A39]" // lighter shade when selected
-                                                                                : "bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200"
+                                                                            ? "bg-[#22264f] text-white border-[#171A39]" // lighter shade when selected
+                                                                            : "bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200"
                                                                             }`}
                                                                     >
                                                                         <div className="flex items-center justify-between">
                                                                             {/* Left side: Title */}
                                                                             <div
                                                                                 className="truncate pr-2"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleArticleClick(article);
-                                                                                }}
+
                                                                             >
                                                                                 {article.title.length > 50
                                                                                     ? `${article.title.substring(0, 50)}...`
@@ -1337,9 +1353,6 @@ const page = () => {
                                 </div>
                             )
                         }
-
-
-
                     </div>
 
                     <div className="flex  gap-4  w-full">
@@ -1405,83 +1418,301 @@ const page = () => {
                                     </div>
                                     <div className="text-sm"><span>Word Count: {calculateTotalWordCount}</span></div>
                                 </div>
+
+
                                 <div className="mb-6 relative">
                                     <div className="relative group">
-                                        <img src={currentArticle?.image_url || "/placeholder.svg?height=300&width=800&text=Army+Veterans+in+Service"} alt="Article Hero" className="w-full h-48 object-cover rounded-lg shadow-md" />
-                                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center space-x-3">
-                                                <button onClick={() => document.getElementById("imageUpload")?.click()} className="bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                    <span>Upload Image</span>
-                                                </button>
-                                                <button onClick={handleImageDelete} className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors duration-200 flex items-center space-x-2 shadow-lg" disabled={isDeleting || articleSaving}>
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                    <span>Delete</span>
-                                                </button>
+                                        {/* Image */}
+                                        <img
+                                            src={
+                                                currentArticle?.image_url ||
+                                                "/placeholder.svg?height=300&width=800&text=Army+Veterans+in+Service"
+                                            }
+                                            alt="Article Hero"
+                                            className="w-full h-48 object-cover rounded-lg shadow-md"
+                                        />
+                                        {validation.image && (
+                                            <p className="text-red-500 text-sm mt-1 absolute bottom-0 left-0 bg-white/70 px-2 py-1 rounded">
+                                                {validation.image}
+                                            </p>
+                                        )}
+
+                                        {/* Loader Overlay */}
+                                        {imgLoading && (
+                                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                                                <AiOutlineLoading3Quarters className="w-10 h-10 text-white animate-spin" />
                                             </div>
-                                        </div>
+                                        )}
+
+                                        {/* Hover overlay for buttons */}
+                                        {!imgLoading && (
+                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center space-x-3">
+                                                    {/* Upload Button */}
+                                                    <button
+                                                        onClick={() =>
+                                                            document.getElementById("imageUpload")?.click()
+                                                        }
+                                                        className="bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
+                                                    >
+                                                        <svg
+                                                            className="w-4 h-4"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                            />
+                                                        </svg>
+                                                        <span>Upload Image</span>
+                                                    </button>
+
+                                                    {/* Delete Button */}
+                                                    <button
+                                                        onClick={handleImageDelete}
+                                                        className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
+                                                    >
+                                                        <svg
+                                                            className="w-4 h-4"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                            />
+                                                        </svg>
+                                                        <span>Delete</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <input title='das' id="imageUpload" type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file); }} className="hidden" />
+                                    {/* Hidden input */}
+                                    <input
+                                        title='asd'
+                                        id="imageUpload"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) handleImageUpload(file);
+                                        }}
+                                        className="hidden"
+                                    />
                                 </div>
+
                                 <div className="mb-4">
                                     {isEditingTitle ? (
                                         <div className="space-y-2">
-                                            <Textarea ref={titleRef} value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} className="text-2xl font-bold resize-none border-2 border-blue-300 focus:border-blue-500" rows={2} placeholder="Enter article title..." disabled={isDeleting || articleSaving} />
+                                            <Textarea
+                                                ref={titleRef}
+                                                value={editedTitle}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    setEditedTitle(value);
+
+                                                    // On-change validation
+                                                    if (!value.trim()) {
+                                                        setValidation(prev => ({ ...prev, title: "Title is required" }));
+                                                    } else if (value.length > 100) {
+                                                        setValidation(prev => ({ ...prev, title: "Title cannot exceed 100 characters" }));
+                                                    } else {
+                                                        setValidation(prev => ({ ...prev, title: "" }));
+                                                    }
+                                                }}
+                                                className={`text-2xl font-bold resize-none border-2 focus:border-blue-500 ${validation.title ? "border-red-400" : "border-blue-300"
+                                                    }`}
+                                                rows={2}
+                                                placeholder="Enter article title..."
+                                                disabled={isDeleting || articleSaving}
+                                            />
+                                            {/* Validation Message */}
+                                            {validation.title && (
+                                                <p className="text-red-500 text-sm">{validation.title}</p>
+                                            )}
                                         </div>
                                     ) : (
-                                        <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors flex items-center justify-between" onClick={() => setIsEditingTitle(true)}>
-                                            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">{editedTitle || "Click to add title..."}</h1>
-                                            <div className="flex items-center space-x-2">
-                                                {currentArticle && (
-                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteArticle(); }} className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700" title="Delete Article" disabled={isDeleting || articleSaving}>
-                                                        <Trash2 className="w-5 h-5" />
-                                                    </button>
-                                                )}
-                                                <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
+                                        <>
+                                            <div
+                                                className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors flex items-center justify-between"
+                                                onClick={() => setIsEditingTitle(true)}
+                                            >
+                                                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
+                                                    {editedTitle || "Click to add title..."}
+                                                </h1>
+                                                <div className="flex items-center space-x-2">
+                                                    {currentArticle && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteArticle(); }}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700"
+                                                            title="Delete Article"
+                                                            disabled={isDeleting || articleSaving}
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+                                                    <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
+                                                </div>
+
                                             </div>
-                                        </div>
+                                            {validation.title && (
+                                                <p className="text-red-500 text-sm mt-1">{validation.title}</p>
+                                            )}
+                                        </>
                                     )}
                                 </div>
+
                                 <div className="mb-6">
                                     {isEditingByline ? (
                                         <div className="space-y-2">
-                                            <Input ref={bylineRef} value={editedByline} onChange={(e) => setEditedByline(e.target.value)} className="border-2 border-blue-300 focus:border-blue-500" placeholder="Enter byline..." disabled={isDeleting || articleSaving} />
+                                            <Input
+                                                ref={bylineRef}
+                                                value={editedByline}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    setEditedByline(value);
+
+                                                    // On-change validation
+                                                    if (!value.trim()) {
+                                                        setValidation(prev => ({ ...prev, byline: "Byline is required" }));
+                                                    } else if (value.length > 100) {
+                                                        setValidation(prev => ({ ...prev, byline: "Byline cannot exceed 100 characters" }));
+                                                    } else {
+                                                        setValidation(prev => ({ ...prev, byline: "" }));
+                                                    }
+                                                }}
+                                                className={`border-2 focus:border-blue-500`}
+                                                placeholder="Enter byline..."
+                                                disabled={isDeleting || articleSaving}
+                                            />
+                                            {validation.byline && (
+                                                <p className="text-red-500 text-sm">{validation.byline}</p>
+                                            )}
                                         </div>
                                     ) : (
-                                        <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors" onClick={() => setIsEditingByline(true)}>
-                                            <p className="text-gray-600 italic">{editedByline || "Click to add byline..."}</p>
-                                            <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                        <div>
+                                            <div
+                                                className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors"
+                                                onClick={() => setIsEditingByline(true)}
+                                            >
+                                                <p className={`italic`}>
+                                                    {editedByline || "Click to add byline..."}
+                                                </p>
+                                                <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                            </div>
+                                            {/* Show validation even when not editing */}
+                                            {validation.byline && (
+                                                <p className="text-red-500 text-sm mt-1">{validation.byline}</p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
+
                                 <div className="mb-6">
                                     {isEditingLeadParagraph ? (
                                         <div className="space-y-2">
-                                            <Textarea ref={leadParagraphRef} value={editedLeadParagraph} onChange={(e) => setEditedLeadParagraph(e.target.value)} className="text-lg font-medium resize-none border-2 border-blue-300 focus:border-blue-500" rows={3} placeholder="Enter lead paragraph..." disabled={isDeleting || articleSaving} />
+                                            <Textarea
+                                                ref={leadParagraphRef}
+                                                value={editedLeadParagraph}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    setEditedLeadParagraph(value);
+
+                                                    // Validation
+                                                    if (!value.trim()) {
+                                                        setValidation(prev => ({ ...prev, leadParagraph: "Lead paragraph is required" }));
+                                                    } else if (value.length > 100) {
+                                                        setValidation(prev => ({ ...prev, leadParagraph: "Lead paragraph cannot exceed 100 characters" }));
+                                                    } else {
+                                                        setValidation(prev => ({ ...prev, leadParagraph: "" }));
+                                                    }
+                                                }}
+                                                className={`text-lg font-medium resize-none border-2 focus:border-blue-500  `}
+                                                rows={3}
+                                                placeholder="Enter lead paragraph..."
+                                                disabled={isDeleting || articleSaving}
+                                            />
+                                            {validation.lead && (
+                                                <p className="text-red-500 text-sm">{validation.lead}</p>
+                                            )}
                                         </div>
                                     ) : (
-                                        <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors" onClick={() => setIsEditingLeadParagraph(true)}>
-                                            <p className="text-lg font-medium text-gray-800 leading-relaxed">{editedLeadParagraph || "Click to add lead paragraph..."}</p>
-                                            <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                        <div>
+                                            <div
+                                                className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors"
+                                                onClick={() => setIsEditingLeadParagraph(true)}
+                                            >
+                                                <p className={`text-lg font-medium leading-relaxed  `}>
+                                                    {editedLeadParagraph || "Click to add lead paragraph..."}
+                                                </p>
+                                                <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                            </div>
+                                            {/* Show validation even when not editing */}
+                                            {validation.lead && (
+                                                <p className="text-red-500 text-sm mt-1">{validation.lead}</p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
+
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                     <div className="lg:col-span-2 space-y-6 text-justify">
                                         <div>
                                             {isEditingContent ? (
                                                 <div className="space-y-2">
-                                                    <Textarea ref={contentRef} value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="resize-none border-2 border-blue-300 focus:border-blue-500 min-h-[200px]" rows={8} placeholder="Enter main article content..." disabled={isDeleting || articleSaving} />
+                                                    <Textarea
+                                                        ref={contentRef}
+                                                        value={editedContent}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            setEditedContent(value);
+
+                                                            // Validation
+                                                            if (!value.trim()) {
+                                                                setValidation(prev => ({ ...prev, content: "Main content is required" }));
+                                                            } else if (value.length > 1000) { // optional length limit
+                                                                setValidation(prev => ({ ...prev, content: "Content cannot exceed 1000 characters" }));
+                                                            } else {
+                                                                setValidation(prev => ({ ...prev, content: "" }));
+                                                            }
+                                                        }}
+                                                        className={`resize-none border-2 focus:border-blue-500 min-h-[200px]  `}
+                                                        rows={8}
+                                                        placeholder="Enter main article content..."
+                                                        disabled={isDeleting || articleSaving}
+                                                    />
+                                                    {validation.content && <p className="text-red-500 text-sm">{validation.content}</p>}
                                                 </div>
                                             ) : (
-                                                <div className="group relative cursor-text hover:bg-gray-50 p-3 rounded-md transition-colors min-h-[200px]" onClick={() => setIsEditingContent(true)}>
-                                                    <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{editedContent || "Click to add main content..."}</div>
+                                                <>
+                                               
+                                                <div
+                                                    className="group relative cursor-text hover:bg-gray-50 p-3 rounded-md transition-colors min-h-[200px]"
+                                                    onClick={() => setIsEditingContent(true)}
+                                                >
+                                                    <div
+                                                        className={`text-gray-700 leading-relaxed whitespace-pre-wrap  `}
+                                                    >
+                                                        {editedContent || "Click to add main content..."}
+                                                    </div>
                                                     <Edit3 className="w-4 h-4 absolute top-3 right-3 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                                   
                                                 </div>
+                                                 {validation.content && <p className="text-red-500 text-sm mt-1">{validation.content}</p>}
+                                            </>
                                             )}
                                         </div>
                                     </div>
+
                                     <div className="lg:col-span-1 space-y-6">
                                         <div className="bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
                                             <div className="bg-gray-200 px-4 py-3 border-b border-gray-200">
@@ -1524,6 +1755,8 @@ const page = () => {
                                         </div>
                                     </div>
                                 </div>
+
+
                                 <div className="flex items-center justify-between text-sm text-gray-600 pt-6 border-t border-gray-200 mt-6 overflow-hidden">
                                     <div className="flex items-center space-x-4 min-w-0">
                                         <span className="truncate">Topic: {editedTags}</span>
@@ -1595,6 +1828,8 @@ const page = () => {
                                         </div>
                                     )}
                                 </div>
+
+
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[#D5ECFF] rounded-lg px-4 py-3 mt-6 space-y-3 sm:space-y-0 sm:gap-4">
                                     <div className="flex items-center space-x-2">
                                         <button
@@ -1662,7 +1897,7 @@ const page = () => {
                             </div>
 
                         </div>
-                        
+
                     </div>
 
                     <div className="bg-white rounded-lg border p-4 mb-4 transform hover:shadow-lg transition-all duration-300">
