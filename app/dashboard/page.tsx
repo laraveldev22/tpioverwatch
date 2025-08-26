@@ -1342,9 +1342,9 @@ const page = () => {
 
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                    <div className="flex  gap-4  w-full">
 
-                        <div className="bg-white rounded-lg shadow-md border border-gray-200 h-[800px] flex flex-col transform hover:shadow-lg transition-all duration-300">
+                        <div className="bg-white rounded-lg shadow-md border w-full sm:w-[90%] md:w-[70%] lg:w-[30%] border-gray-200 h-[800px] flex flex-col transform hover:shadow-lg transition-all duration-300">
                             <div className="bg-[#171a39] text-white text-center py-3 rounded-t-lg">
                                 <h2 className="text-base lg:text-lg font-semibold">AI CHAT</h2>
                             </div>
@@ -1387,28 +1387,9 @@ const page = () => {
                                     )}
                                 </div>
                             </div>
-
                         </div>
 
-                        <div
-                            className="bg-white rounded-lg border border-gray-200 shadow-md h-[800px] flex flex-col transform hover:shadow-lg transition-all duration-300"
-                            onDragOver={(e) => {
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = "copy";
-                            }}
-                            onDrop={async (e) => {
-                                e.preventDefault();
-                                try {
-                                    const articleData = JSON.parse(e.dataTransfer.getData("application/json"));
-                                    if (!articleData.id || !articleData.title) throw new Error("Invalid article data");
-                                    await handleArticleClick(articleData);
-                                } catch (err) {
-                                    setError("Failed to load dropped article");
-                                    clearError();
-                                    console.error("Error handling dropped article:", err);
-                                }
-                            }}
-                        >
+                        <div className="bg-white rounded-lg border w-full sm:w-[90%] md:w-[80%] lg:w-[70%] border-gray-200 shadow-md h-[800px] flex flex-col transform hover:shadow-lg transition-all duration-300">
                             <div className="bg-[#171a39] text-white text-center py-3 rounded-t-lg">
                                 <h2 className="text-base lg:text-lg font-semibold" id="article">ARTICLE FRAME</h2>
                             </div>
@@ -1681,6 +1662,7 @@ const page = () => {
                             </div>
 
                         </div>
+                        
                     </div>
 
                     <div className="bg-white rounded-lg border p-4 mb-4 transform hover:shadow-lg transition-all duration-300">
