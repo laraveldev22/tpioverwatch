@@ -586,7 +586,7 @@ const page = () => {
                 image_url: currentArticle?.image_url || "",
                 cta_url: editedCtaLink,
             };
-            if (currentArticle) {
+            if (currentArticle && currentArticle.id) {
                 response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${currentArticle.id}/`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
@@ -608,7 +608,7 @@ const page = () => {
                     router.push("/");
                     return;
                 }
-                if (response.status === 404 && currentArticle) {
+                if (response.status === 404) {
                     setError("Article not found or you do not have permission");
                     clearError();
                     return;
