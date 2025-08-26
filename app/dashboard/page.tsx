@@ -388,7 +388,7 @@ const page = () => {
             const updatedArticle = { ...currentArticle, image_url: imageUrl };
             //@ts-ignore
             setCurrentArticle(updatedArticle);
-            toast.success("Image uploaded successfully!");
+            toast.success("Image Uploaded Successfully!");
             setTimeout(() => setSaveSuccess(null), 3000);
         } catch (err) {
             setError(
@@ -410,7 +410,7 @@ const page = () => {
             const articleData = { ...currentArticle, image_url: "" };
             //@ts-ignore
             setCurrentArticle(articleData);
-            toast.success("Image deleted successfully!");
+            toast.success("Image Deleted Successfully!");
             setTimeout(() => setSaveSuccess(null), 3000);
         } catch (err) {
             setError(`Failed to delete image: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -1471,26 +1471,29 @@ const page = () => {
                                                         <span>Upload Image</span>
                                                     </button>
 
-                                                    {/* Delete Button */}
-                                                    <button
-                                                        onClick={handleImageDelete}
-                                                        className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
-                                                    >
-                                                        <svg
-                                                            className="w-4 h-4"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
+                                                    {
+                                                        currentArticle?.image_url && <button
+                                                            onClick={handleImageDelete}
+                                                            className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
                                                         >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                            />
-                                                        </svg>
-                                                        <span>Delete</span>
-                                                    </button>
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                                />
+                                                            </svg>
+                                                            <span>Delete</span>
+                                                        </button>
+                                                    }
+                                                    {/* Delete Button */}
+
                                                 </div>
                                             </div>
                                         )}
@@ -1629,11 +1632,11 @@ const page = () => {
 
                                                     // Validation
                                                     if (!value.trim()) {
-                                                        setValidation(prev => ({ ...prev, leadParagraph: "Lead paragraph is required" }));
+                                                        setValidation(prev => ({ ...prev, lead: "Lead paragraph is required" }));
                                                     } else if (value.length > 100) {
-                                                        setValidation(prev => ({ ...prev, leadParagraph: "Lead paragraph cannot exceed 100 characters" }));
+                                                        setValidation(prev => ({ ...prev, lead: "Lead paragraph cannot exceed 100 characters" }));
                                                     } else {
-                                                        setValidation(prev => ({ ...prev, leadParagraph: "" }));
+                                                        setValidation(prev => ({ ...prev, lead: "" }));
                                                     }
                                                 }}
                                                 className={`text-lg font-medium resize-none border-2 focus:border-blue-500  `}
@@ -1694,21 +1697,21 @@ const page = () => {
                                                 </div>
                                             ) : (
                                                 <>
-                                               
-                                                <div
-                                                    className="group relative cursor-text hover:bg-gray-50 p-3 rounded-md transition-colors min-h-[200px]"
-                                                    onClick={() => setIsEditingContent(true)}
-                                                >
+
                                                     <div
-                                                        className={`text-gray-700 leading-relaxed whitespace-pre-wrap  `}
+                                                        className="group relative cursor-text hover:bg-gray-50 p-3 rounded-md transition-colors min-h-[200px]"
+                                                        onClick={() => setIsEditingContent(true)}
                                                     >
-                                                        {editedContent || "Click to add main content..."}
+                                                        <div
+                                                            className={`text-gray-700 leading-relaxed whitespace-pre-wrap  `}
+                                                        >
+                                                            {editedContent || "Click to add main content..."}
+                                                        </div>
+                                                        <Edit3 className="w-4 h-4 absolute top-3 right-3 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+
                                                     </div>
-                                                    <Edit3 className="w-4 h-4 absolute top-3 right-3 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
-                                                   
-                                                </div>
-                                                 {validation.content && <p className="text-red-500 text-sm mt-1">{validation.content}</p>}
-                                            </>
+                                                    {validation.content && <p className="text-red-500 text-sm mt-1">{validation.content}</p>}
+                                                </>
                                             )}
                                         </div>
                                     </div>

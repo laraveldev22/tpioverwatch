@@ -209,7 +209,7 @@ function NewsletterPublishs() {
           <section className="mb-8 p-0 rounded-lg">
             <h2
               className="text-2xl font-bold mb-4 text-gray-800 cursor-text"
-              title="Click to edit"
+             
             >
               {editableMessageTitle ?? "N/A"}
             </h2>
@@ -218,7 +218,7 @@ function NewsletterPublishs() {
 
             <p
               className="text-lg text-gray-700 leading-relaxed cursor-text"
-              title="Click to edit"
+             
             >
               {editableMessage ?? "N/A"}
             </p>
