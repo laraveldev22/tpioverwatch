@@ -74,6 +74,7 @@ const page = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [currentArticle, setCurrentArticle] = useState<FullArticle | null>(null);
+    console.log(currentArticle, "currentArticle")
     const [articleSaving, setArticleSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -1847,6 +1848,7 @@ const page = () => {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         {/* Save Button */}
+
                                         <Button
                                             onClick={handleSaveArticle}
                                             disabled={articleSaving || isDeleting}
@@ -1859,28 +1861,36 @@ const page = () => {
                                         </Button>
 
                                         {/* Publish / Unpublish Button */}
-                                        {currentArticle?.is_newsletter ? (
-                                            <Button
-                                                onClick={handleUnpublish}
-                                                disabled={articleSaving || isDeleting}
-                                                size="sm"
-                                                variant="outline"
-                                                className="flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 bg-transparent border-[#171A39] text-[#171A39] hover:bg-[#171A39]/10"
-                                            >
-                                                <img src="/Frame.svg" alt="Unpublish" className="w-4 h-4" />
-                                                <span className="text-xs">Remove</span>
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                onClick={handlePublish}
-                                                size="sm"
-                                                variant="outline"
-                                                className="flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 bg-transparent border-[#171A39] text-[#171A39] hover:bg-[#171A39]/10"
-                                            >
-                                                <img src="/Frame.svg" alt="Publish" className="w-4 h-4" />
-                                                <span className="text-xs">Add</span>
-                                            </Button>
-                                        )}
+
+
+                                        {
+                                            //@ts-ignore
+                                              (currentArticle?.is_newsletter === 0) && <>
+                                                {currentArticle?.is_newsletter ? (
+                                                    <Button
+                                                        onClick={handleUnpublish}
+                                                        disabled={articleSaving || isDeleting}
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 bg-transparent border-[#171A39] text-[#171A39] hover:bg-[#171A39]/10"
+                                                    >
+                                                        <img src="/Frame.svg" alt="Unpublish" className="w-4 h-4" />
+                                                        <span className="text-xs">Remove</span>
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        onClick={handlePublish}
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 bg-transparent border-[#171A39] text-[#171A39] hover:bg-[#171A39]/10"
+                                                    >
+                                                        <img src="/Frame.svg" alt="Publish" className="w-4 h-4" />
+                                                        <span className="text-xs">Add</span>
+                                                    </Button>
+                                                )}
+                                            </>
+                                        }
+
 
                                         {/* Export PDF Button */}
                                         <Button
