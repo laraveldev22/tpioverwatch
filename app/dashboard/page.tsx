@@ -2,7 +2,7 @@
 import React, { RefObject } from 'react'
 import DashboardLayout from '../layout/DashboardLayout'
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { CheckCircle, Edit3, Loader2, Send, Trash2, XCircle } from "lucide-react";
+import { CheckCircle, Edit3, Loader2, Plus, Send, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
@@ -29,7 +29,7 @@ interface Article {
     title: string
     content?: string
     category?: string
-    is_newsletter?: boolean
+    is_newsletter: boolean
     created_at: string
     byline?: string
     lead_paragraph?: string
@@ -170,37 +170,38 @@ const page = () => {
 
     const clearError = useCallback(() => setTimeout(() => setError(null), 5000), []);
 
-  // regex + ajax validation
-  const validateUrl = async (url: string) => {
-    if (!url) {
-      setIsValidUrl(null);
-      return;
-    }
+    // regex + ajax validation
+    const validateUrl = async (url: string) => {
+        if (!url) {
+            setIsValidUrl(null);
+            return;
+        }
 
-    // Step 1: regex format check
-    const urlPattern = new RegExp(
-      "^(https?:\\/\\/)?" + // protocol
-      "((([a-zA-Z0-9\\-])+\\.)+[a-zA-Z]{2,})" + // domain
-      "(\\:[0-9]{1,5})?" + // port
-      "(\\/.*)?$" // path
-    );
-    if (!urlPattern.test(url)) {
-      setIsValidUrl(false);
-      return;
-    }
+        // Step 1: regex format check
+        const urlPattern = new RegExp(
+            "^(https?:\\/\\/)?" + // protocol
+            "((([a-zA-Z0-9\\-])+\\.)+[a-zA-Z]{2,})" + // domain
+            "(\\:[0-9]{1,5})?" + // port
+            "(\\/.*)?$" // path
+        );
+        if (!urlPattern.test(url)) {
+            setIsValidUrl(false);
+            return;
+        }
 
-    // Step 2: ajax check (HEAD request)
-    setValidating(true);
-    try {
-      const res = await fetch(url, { method: "HEAD", mode: "no-cors" });
-      // "no-cors" won’t give status, so just assume reachable
-      setIsValidUrl(true);
-    } catch (err) {
-      setIsValidUrl(false);
-    } finally {
-      setValidating(false);
-    }
-  };
+        // Step 2: ajax check (HEAD request)
+        setValidating(true);
+        try {
+            const res = await fetch(url, { method: "HEAD", mode: "no-cors" });
+            // "no-cors" won’t give status, so just assume reachable
+            setIsValidUrl(true);
+        } catch (err) {
+            setIsValidUrl(false);
+        } finally {
+            setValidating(false);
+        }
+    };
+
     const fetchArticleDetails = useCallback(async (articleId: string) => {
         if (!token) return null;
         setArticleDetailLoading(true);
@@ -269,7 +270,6 @@ const page = () => {
             console.error("Failed to reorder articles:", error);
         }
     };
-
 
     const handleImageUpload = async (file: File) => {
         if (!currentArticle || !token) {
@@ -609,7 +609,7 @@ const page = () => {
             setTimeout(() => setSaveSuccess(null), 3000);
             fetchArticles();
         } catch (err) {
-            setError("An error occurred while saving the article");
+            toast.error("Ensure this field has no more than 100 characters.");
             clearError();
             console.error("Error saving article:", err);
         } finally {
@@ -675,6 +675,7 @@ const page = () => {
             setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
             clearError();
             console.error("Error publishing article:", err);
+             toast.error("Newsletter Added successfully!");
         } finally {
             setArticleSaving(false);
         }
@@ -788,11 +789,11 @@ const page = () => {
                     quote_block: articleData.quote_block || "AI-generated quote.",
                     cta: articleData.cta || "Learn more",
                     tags: Array.isArray(articleData.tags) ? articleData.tags.join(", ") : articleData.tags || "",
-                    image_url: articleData.image_url || "",
+                    image_url: articleData.image_url || currentArticle?.image_url || "",
                     is_auto_generated: true,
                     conversation_session: articleData.conversation_session || sessionId,
                 };
-                setCurrentArticle(newArticle);
+                setCurrentArticle({ ...newArticle });
                 setSelectedCategory(newArticle.category || "A");
                 fetchArticles();
             }
@@ -928,7 +929,6 @@ const page = () => {
         }
     };
 
-
     const remove = async (item: Article) => {
 
         handleUnpublish()
@@ -955,11 +955,68 @@ const page = () => {
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article unpublished successfully!");
             setTimeout(() => setSaveSuccess(null), 2000);
-            window.location.reload();
+            fetchArticles()
         } catch (err) {
             setError(`Failed to unpublish article: ${err instanceof Error ? err.message : "Unknown error"}`);
             clearError();
             console.error("Error unpublishing article:", err);
+        } finally {
+            setArticleSaving(false);
+        }
+    }
+
+    const addNewsLetter = async (id: string) => {
+        if (!token) {
+            setError("Authentication required");
+            clearError();
+            return;
+        }
+
+        setArticleSaving(true);
+        setSaveSuccess(null);
+        try {
+            // Save the current article if it’s being edited
+            if (currentArticle) {
+                await handleSaveArticle();
+            }
+            // Fetch full article details
+            const fullArticle = await fetchArticleDetails(id);
+            if (!fullArticle) {
+                throw new Error(`Failed to fetch details for article ${id}`);
+            }
+            // Update newsletter status
+            const updatedArticle = {
+                ...fullArticle,
+                is_newsletter: 1,
+                cta_url: editedCtaLink,
+            };
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${id}/`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
+                body: JSON.stringify(updatedArticle),
+            });
+            if (!response.ok) {
+                if (response.status === 401) {
+                    setError("Authentication failed. Please log in again.");
+                    clearError();
+                    localStorage.removeItem("token");
+                    setToken(null);
+                    router.push("/");
+                    return;
+                }
+                throw new Error(`Failed to update article ${id} newsletter status`);
+            }
+            const savedArticle = await response.json();
+            setCurrentArticle(savedArticle);
+            setSaveSuccess("Article published successfully!");
+            setNewsletterReFetch((prev) => prev + 1);
+            toast.success("Newsletter Added successfully!");
+            fetchArticles()
+
+        } catch (err) {
+            setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
+            clearError();
+            console.error("Error publishing article:", err);
         } finally {
             setArticleSaving(false);
         }
@@ -1181,81 +1238,107 @@ const page = () => {
                         </div>
 
                         {
-                            articlesLoading ? <div className="w-full flex items-center justify-center py-6">
-                                <CgSpinner className="animate-spin w-10 h-10" />
-                            </div> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5">
+                            articlesLoading ? (
+                                <div className="w-full flex items-center justify-center py-6">
+                                    <CgSpinner className="animate-spin w-10 h-10 text-[#171A39]" />
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-5">
+                                    {Object.entries(articleCategories).map(([category, categoryName]) => (
+                                        <div
+                                            key={category}
+                                            className="bg-white shadow-lg rounded-2xl overflow-hidden transform hover:scale-105 hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gray-200"
+                                            onClick={() => handleCategoryClick(category)}
+                                        >
+                                            {/* Header */}
+                                            <div className="bg-[#171A39] px-4 py-3 flex justify-between items-center">
+                                                <h3 className="text-sm font-semibold text-white tracking-wide">
+                                                    {categoryName} ({articleData[category]?.length || 0})
+                                                </h3>
+                                            </div>
 
+                                            {/* Articles */}
+                                            <div className="relative">
+                                                <div className="h-48 overflow-y-auto article-shelf-scroll">
+                                                    <div className="p-3 space-y-2">
+                                                        {articleLoading[category] ? (
+                                                            <div className="bg-gray-100 p-3 rounded-lg text-xs text-gray-500 text-center animate-pulse">
+                                                                Loading articles...
+                                                            </div>
+                                                        ) : articleError[category] ? (
+                                                            <div className="bg-red-50 p-3 rounded-lg text-xs text-red-600 text-center">
+                                                                {articleError[category]}
+                                                            </div>
+                                                        ) : (
+                                                            articleData[category].map((article) => {
+                                                                const slotNumber = getGlobalSlotNumber(article.id);
+                                                                return (
+                                                                    <div
+                                                                        key={article.id}
+                                                                        className={`shadow-sm p-3 rounded-lg text-xs cursor-pointer transition-all duration-200 border ${currentArticle?.id === article.id
+                                                                                ? "bg-[#22264f] text-white border-[#171A39]" // lighter shade when selected
+                                                                                : "bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200"
+                                                                            }`}
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            {/* Left side: Title */}
+                                                                            <div
+                                                                                className="truncate pr-2"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleArticleClick(article);
+                                                                                }}
+                                                                            >
+                                                                                {article.title.length > 50
+                                                                                    ? `${article.title.substring(0, 50)}...`
+                                                                                    : article.title}
 
-                                {Object.entries(articleCategories).map(([category, categoryName]) => (
-                                    <div
-                                        key={category}
-                                        className="bg-white shadow-md rounded-lg overflow-hidden transform hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                                        onClick={() => handleCategoryClick(category)}
-                                    >
-                                        <div className="bg-[#D5ECFF] px-3 py-3 text-center">
-                                            <h3 className="text-sm font-medium text-gray-800">
-                                                {categoryName} ({articleData[category]?.length || 0})
-                                            </h3>
-                                        </div>
+                                                                                {slotNumber && (
+                                                                                    <span className="ml-2 text-green-500 font-medium">
+                                                                                        (Slot {slotNumber})
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
 
-                                        <div className="relative">
-                                            <div className="h-40 overflow-y-auto article-shelf-scroll">
-                                                <div className="p-2 space-y-1">
-                                                    {articleLoading[category] ? (
-                                                        <div className="bg-gray-100 p-3 rounded text-xs text-gray-500 text-center animate-pulse">
-                                                            Loading articles...
-                                                        </div>
-                                                    ) : articleError[category] ? (
-                                                        <div className="bg-red-50 p-3 rounded text-xs text-red-600 text-center">
-                                                            {articleError[category]}
-                                                        </div>
-                                                    ) : (
-                                                        articleData[category].map((article) => {
-                                                            const slotNumber = getGlobalSlotNumber(article.id);
-
-                                                            return (
-                                                                <div
-                                                                    key={article.id}
-                                                                    className={`shadow-md p-3 rounded text-xs cursor-pointer hover:scale-105 transition-all duration-200 ${currentArticle?.id === article.id
-                                                                        ? "bg-[#132A36] text-white"
-                                                                        : "bg-gray-100 text-gray-700 hover:bg-blue-50"
-                                                                        }`}
-                                                                    title={article.title}
-                                                                    draggable={true}
-                                                                    onDragStart={(e) => {
-                                                                        e.dataTransfer.setData(
-                                                                            "application/json",
-                                                                            JSON.stringify(article)
-                                                                        );
-                                                                        e.dataTransfer.effectAllowed = "copy";
-                                                                    }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleArticleClick(article);
-                                                                    }}
-                                                                >
-                                                                    {article.title.length > 50
-                                                                        ? `${article.title.substring(0, 50)}...`
-                                                                        : article.title}
-
-                                                                    {slotNumber && (
-                                                                        <span className="ml-2 text-green-500">
-                                                                            (Slot {slotNumber})
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })
-                                                    )}
+                                                                            {/* Right side: Add / Remove */}
+                                                                            {article.is_newsletter ? (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        remove(article);
+                                                                                    }}
+                                                                                    className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full shadow-sm hover:shadow-md transition flex-shrink-0"
+                                                                                    title="Remove from Newsletter"
+                                                                                >
+                                                                                    <Trash2 className="w-3 h-3" />
+                                                                                </button>
+                                                                            ) : (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        addNewsLetter(article.id);
+                                                                                    }}
+                                                                                    className="bg-[#171A39] hover:bg-[#22264f] text-white p-1 rounded-full shadow-sm hover:shadow-md transition flex-shrink-0"
+                                                                                    title="Add to Newsletter"
+                                                                                >
+                                                                                    <Plus className="w-3 h-3" />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-
-
-                            </div>
+                                    ))}
+                                </div>
+                            )
                         }
+
+
 
                     </div>
 
@@ -1468,18 +1551,20 @@ const page = () => {
                                     </div>
                                 </div>
                                 <div className="mt-4">
+                                    <label htmlFor="ctaInput" className="block text-sm font-bold text-gray-700 space-y-2  ">
+                                        CTA Title
+                                    </label>
                                     {isEditingCta ? (
                                         <div className="space-y-2">
-                                            <Input ref={ctaRef} value={editedCta} onChange={(e) => setEditedCta(e.target.value)} className="border-2 border-blue-300 focus:border-blue-500" placeholder="Enter CTA Content..." disabled={isDeleting || articleSaving} />
+                                            <Input ref={ctaRef} value={editedCta} onChange={(e) => setEditedCta(e.target.value)} className="border-2 border-blue-300 focus:border-blue-500" placeholder="Enter CTA Title..." disabled={isDeleting || articleSaving} />
                                         </div>
                                     ) : (
-                                        <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors" onClick={() => setIsEditingCta(true)}>
-                                            <a href={editedCta} target="_blank" rel="noopener noreferrer" className="text-black  " onClick={(e) => e.preventDefault()}>{editedCta || "Click to add CTA Content..."}</a>
+                                        <div className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors my-3" onClick={() => setIsEditingCta(true)}>
+                                            <a href={editedCta} target="_blank" rel="noopener noreferrer" className="text-black  " onClick={(e) => e.preventDefault()}>{editedCta || "Click to add CTA Title..."}</a>
                                             <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
                                         </div>
                                     )}
                                 </div>
-
                                 <div className="mt-4">
                                     {isEditingCtaLink ? (
                                         <div className="space-y-2 relative">
