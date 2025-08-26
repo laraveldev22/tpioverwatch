@@ -91,6 +91,7 @@ function NewsletterPublishs() {
         tags: article.tags || "",
         created_at: article.updated_at || article.created_at || new Date().toISOString(),
         cta: article.cta || "",
+         cta_url :article.cta_url||"",
       }));
       const allArticleIds = transformedArticles.map((a: any) => a.id);
       setArticleIds(allArticleIds);
@@ -140,7 +141,7 @@ function NewsletterPublishs() {
         tags: article.tags || "",
         created_at: article.updated_at || article.created_at || new Date().toISOString(),
         cta: article.cta || "",
-        cta_url :article.article||"",
+        cta_url :article.cta_url||"",
         
       }));
       const allArticleIds = transformedArticles.map((a: any) => a.id);
