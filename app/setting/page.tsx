@@ -72,7 +72,7 @@ const Page = () => {
         const payload = {
             frequency: frequency.toLowerCase(),
             custom_days: frequency === "Custom" ? Number(customDays) : null,
-            num_articles:numArticles ,
+            num_articles: numArticles,
             max_size: Number(numArticles) || null,
         };
 
@@ -153,7 +153,7 @@ const Page = () => {
 
                     {/* Number of Articles */}
                     <div className="mb-4">
-                        <label className="block text-gray-700 mb-2">Number of Articles</label>
+                        <label className="block text-gray-700 mb-2">Number of Newsletter</label>
                         <input
                             title="sad"
                             type="number"
