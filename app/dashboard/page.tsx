@@ -770,7 +770,7 @@ const page = () => {
                     title: articleData.title || "Generated Article",
                     content: articleData.content || "Generated content from search.",
                     category: articleData.category || "A",
-                    is_newsletter: articleData.is_newsletter || false,
+                    is_newsletter: articleData.is_newsletter || 0,
                     created_at: articleData.created_at || new Date().toISOString(),
                     byline: articleData.byline || "AI Generated",
                     lead_paragraph: articleData.lead_paragraph || "AI-generated lead paragraph.",
