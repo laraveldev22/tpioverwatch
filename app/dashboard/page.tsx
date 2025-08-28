@@ -115,12 +115,6 @@ const page = () => {
     const [articleData, setArticleData] = useState<{ [key: string]: Article[] }>({
         A: [], B: [], C: [], D: [],
     });
-    const [articleLoading, setArticleLoading] = useState<{ [key: string]: boolean }>({
-        A: false, B: false, C: false, D: false,
-    });
-    const [articleError, setArticleError] = useState<{ [key: string]: string | null }>({
-        A: null, B: null, C: null, D: null,
-    });
     const [articleDetailLoading, setArticleDetailLoading] = useState(false);
     const [articleDetailError, setArticleDetailError] = useState<string | null>(null);
     const [newsletterLoader, setnewsLetterLoader] = useState(true)
@@ -301,7 +295,6 @@ const page = () => {
     };
 
     const handleImageUpload = async (file: File) => {
-
         if (!file) {
             setValidation(prev => ({ ...prev, image: "Please upload an image" }));
             return;
@@ -545,17 +538,6 @@ const page = () => {
         handleExportPDF();
     };
 
-    const handleCategoryClick = useCallback((category: string) => {
-        setSelectedCategory(category);
-        setCurrentArticle(null);
-        setIsEditingTitle(false);
-        setIsEditingByline(false);
-        setIsEditingLeadParagraph(false);
-        setIsEditingContent(false);
-        setIsEditingKeyFacts(false);
-        setIsEditingQuoteBlock(false);
-        setIsEditingCta(false);
-    }, []);
 
     const handleSaveArticle = async () => {
         if (!token) {
@@ -1264,7 +1246,7 @@ const page = () => {
                                         <div
                                             key={category}
                                             className="bg-white shadow-lg rounded-2xl overflow-hidden transform hover:scale-105 hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gray-200"
-                                            onClick={() => handleCategoryClick(category)}
+
                                         >
                                             {/* Header */}
                                             <div className="bg-[#171A39] px-4 py-3 flex justify-between items-center">
@@ -1277,15 +1259,7 @@ const page = () => {
                                             <div className="relative">
                                                 <div className="h-48 overflow-y-auto article-shelf-scroll">
                                                     <div className="p-3 space-y-2">
-                                                        {articleLoading[category] ? (
-                                                            <div className="bg-gray-100 p-3 rounded-lg text-xs text-gray-500 text-center animate-pulse">
-                                                                Loading articles...
-                                                            </div>
-                                                        ) : articleError[category] ? (
-                                                            <div className="bg-red-50 p-3 rounded-lg text-xs text-red-600 text-center">
-                                                                {articleError[category]}
-                                                            </div>
-                                                        ) : (
+                                                        {
                                                             articleData[category].map((article) => {
                                                                 const slotNumber = getGlobalSlotNumber(article.id);
                                                                 return (
@@ -1345,7 +1319,7 @@ const page = () => {
                                                                     </div>
                                                                 );
                                                             })
-                                                        )}
+                                                        }
                                                     </div>
                                                 </div>
                                             </div>
@@ -1420,9 +1394,8 @@ const page = () => {
                                     <div className="text-sm"><span>Word Count: {calculateTotalWordCount}</span></div>
                                 </div>
 
-
                                 <div className="mb-6 relative">
-                                    <div className="relative group">
+                                    <div className="relative group rounded-xl overflow-hidden shadow-xl">
                                         {/* Image */}
                                         <img
                                             src={
@@ -1430,34 +1403,56 @@ const page = () => {
                                                 "/placeholder.svg?height=300&width=800&text=Army+Veterans+in+Service"
                                             }
                                             alt="Article Hero"
-                                            className="w-full h-48 object-cover rounded-lg shadow-md"
+                                            className="w-full h-56 object-cover rounded-xl transform group-hover:scale-105 transition-transform duration-500 ease-in-out"
                                         />
+
+                                        {/* Validation Message */}
                                         {validation.image && (
-                                            <p className="text-red-500 text-sm mt-1 absolute bottom-0 left-0 bg-white/70 px-2 py-1 rounded">
+                                            <p className="text-red-600 text-sm mt-1 absolute bottom-2 left-2 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg shadow-md">
                                                 {validation.image}
                                             </p>
                                         )}
 
                                         {/* Loader Overlay */}
                                         {imgLoading && (
-                                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
-                                                <AiOutlineLoading3Quarters className="w-10 h-10 text-white animate-spin" />
+                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center rounded-xl">
+                                                <AiOutlineLoading3Quarters className="w-12 h-12 text-white animate-spin" />
                                             </div>
                                         )}
 
-                                        {/* Hover overlay for buttons */}
+                                        {/* Hover Overlay for Buttons */}
                                         {!imgLoading && (
-                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
-                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center space-x-3">
-                                                    {/* Upload Button */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center space-x-4">
+
+                                                {/* Upload Button */}
+                                                <button
+                                                    onClick={() => document.getElementById("imageUpload")?.click()}
+                                                    className="bg-white/80 backdrop-blur-md text-gray-800 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-white transition-all duration-300 flex items-center space-x-2"
+                                                >
+                                                    <svg
+                                                        className="w-5 h-5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                        />
+                                                    </svg>
+                                                    <span>Upload</span>
+                                                </button>
+
+                                                {/* Delete Button */}
+                                                {currentArticle?.image_url && (
                                                     <button
-                                                        onClick={() =>
-                                                            document.getElementById("imageUpload")?.click()
-                                                        }
-                                                        className="bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
+                                                        onClick={handleImageDelete}
+                                                        className="bg-red-500/90 backdrop-blur-md text-white px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-red-600 transition-all duration-300 flex items-center space-x-2"
                                                     >
                                                         <svg
-                                                            className="w-4 h-4"
+                                                            className="w-5 h-5"
                                                             fill="none"
                                                             stroke="currentColor"
                                                             viewBox="0 0 24 24"
@@ -1466,43 +1461,19 @@ const page = () => {
                                                                 strokeLinecap="round"
                                                                 strokeLinejoin="round"
                                                                 strokeWidth={2}
-                                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                                                             />
                                                         </svg>
-                                                        <span>Upload Image</span>
+                                                        <span>Delete</span>
                                                     </button>
-
-                                                    {
-                                                        currentArticle?.image_url && <button
-                                                            onClick={handleImageDelete}
-                                                            className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
-                                                        >
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                                />
-                                                            </svg>
-                                                            <span>Delete</span>
-                                                        </button>
-                                                    }
-                                                    {/* Delete Button */}
-
-                                                </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Hidden input */}
+                                    {/* Hidden Input */}
                                     <input
-                                        title='asd'
+                                        title='imageUpload'
                                         id="imageUpload"
                                         type="file"
                                         accept="image/*"
@@ -1514,7 +1485,7 @@ const page = () => {
                                     />
                                 </div>
 
-                                <div className="mb-4">
+                                <div className="mb-6">
                                     {isEditingTitle ? (
                                         <div className="space-y-2">
                                             <Textarea
@@ -1526,14 +1497,20 @@ const page = () => {
 
                                                     // On-change validation
                                                     if (!value.trim()) {
-                                                        setValidation(prev => ({ ...prev, title: "Title is required" }));
+                                                        setValidation((prev) => ({
+                                                            ...prev,
+                                                            title: "Title is required",
+                                                        }));
                                                     } else if (value.length > 100) {
-                                                        setValidation(prev => ({ ...prev, title: "Title cannot exceed 100 characters" }));
+                                                        setValidation((prev) => ({
+                                                            ...prev,
+                                                            title: "Title cannot exceed 100 characters",
+                                                        }));
                                                     } else {
-                                                        setValidation(prev => ({ ...prev, title: "" }));
+                                                        setValidation((prev) => ({ ...prev, title: "" }));
                                                     }
                                                 }}
-                                                className={`text-2xl font-bold resize-none border-2 focus:border-blue-500 ${validation.title ? "border-red-400" : "border-blue-300"
+                                                className={`text-2xl lg:text-3xl font-bold resize-none border-2 rounded-xl shadow-sm px-4 py-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 placeholder-gray-400 ${validation.title ? "border-red-400 bg-red-50/60" : "border-gray-300 bg-white"
                                                     }`}
                                                 rows={2}
                                                 placeholder="Enter article title..."
@@ -1541,35 +1518,42 @@ const page = () => {
                                             />
                                             {/* Validation Message */}
                                             {validation.title && (
-                                                <p className="text-red-500 text-sm">{validation.title}</p>
+                                                <p className="text-red-500 text-sm font-medium animate-fadeIn">
+                                                    {validation.title}
+                                                </p>
                                             )}
                                         </div>
                                     ) : (
                                         <>
                                             <div
-                                                className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors flex items-center justify-between"
+                                                className="group relative cursor-text hover:bg-gray-50/80 px-3 py-2 rounded-lg transition-all duration-300 flex items-center justify-between border border-transparent hover:border-gray-200"
                                                 onClick={() => setIsEditingTitle(true)}
                                             >
-                                                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
+                                                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-snug group-hover:text-blue-600 transition-colors duration-300">
                                                     {editedTitle || "Click to add title..."}
                                                 </h1>
-                                                <div className="flex items-center space-x-2">
+                                                <div className="flex items-center space-x-3">
                                                     {currentArticle && (
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); handleDeleteArticle(); }}
-                                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteArticle();
+                                                            }}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 transform hover:scale-110"
                                                             title="Delete Article"
                                                             disabled={isDeleting || articleSaving}
                                                         >
                                                             <Trash2 className="w-5 h-5" />
                                                         </button>
                                                     )}
-                                                    <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
+                                                    <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all text-gray-400 hover:text-gray-600" />
                                                 </div>
-
                                             </div>
+
                                             {validation.title && (
-                                                <p className="text-red-500 text-sm mt-1">{validation.title}</p>
+                                                <p className="text-red-500 text-sm mt-1 font-medium animate-fadeIn pl-4">
+                                                    {validation.title}
+                                                </p>
                                             )}
                                         </>
                                     )}
@@ -1587,35 +1571,54 @@ const page = () => {
 
                                                     // On-change validation
                                                     if (!value.trim()) {
-                                                        setValidation(prev => ({ ...prev, byline: "Byline is required" }));
+                                                        setValidation((prev) => ({
+                                                            ...prev,
+                                                            byline: "Byline is required",
+                                                        }));
                                                     } else if (value.length > 100) {
-                                                        setValidation(prev => ({ ...prev, byline: "Byline cannot exceed 100 characters" }));
+                                                        setValidation((prev) => ({
+                                                            ...prev,
+                                                            byline: "Byline cannot exceed 100 characters",
+                                                        }));
                                                     } else {
-                                                        setValidation(prev => ({ ...prev, byline: "" }));
+                                                        setValidation((prev) => ({ ...prev, byline: "" }));
                                                     }
                                                 }}
-                                                className={`border-2 focus:border-blue-500`}
+                                                className={`w-full border-2 rounded-lg px-4 py-2 shadow-sm transition-all duration-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 ${validation.byline ? "border-red-400 bg-red-50/60" : "border-gray-300 bg-white"
+                                                    }`}
                                                 placeholder="Enter byline..."
                                                 disabled={isDeleting || articleSaving}
                                             />
+
+                                            {/* Validation Message */}
                                             {validation.byline && (
-                                                <p className="text-red-500 text-sm">{validation.byline}</p>
+                                                <p className="text-red-500 text-sm font-medium animate-fadeIn">
+                                                    {validation.byline}
+                                                </p>
                                             )}
                                         </div>
                                     ) : (
                                         <div>
                                             <div
-                                                className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors"
+                                                className="group relative cursor-text hover:bg-gray-50/80 px-3 py-2 rounded-lg transition-all duration-300 flex items-center justify-between border border-transparent hover:border-gray-200"
                                                 onClick={() => setIsEditingByline(true)}
                                             >
-                                                <p className={`italic`}>
+                                                <p
+                                                    className={`italic text-gray-700 group-hover:text-blue-600 transition-colors duration-300 ${!editedByline ? "text-gray-400 italic" : ""
+                                                        }`}
+                                                >
                                                     {editedByline || "Click to add byline..."}
                                                 </p>
-                                                <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+
+                                                {/* Edit Icon */}
+                                                <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all duration-300 text-gray-400 hover:text-gray-600" />
                                             </div>
-                                            {/* Show validation even when not editing */}
+
+                                            {/* Validation Message */}
                                             {validation.byline && (
-                                                <p className="text-red-500 text-sm mt-1">{validation.byline}</p>
+                                                <p className="text-red-500 text-sm mt-1 font-medium animate-fadeIn pl-4">
+                                                    {validation.byline}
+                                                </p>
                                             )}
                                         </div>
                                     )}
@@ -1633,42 +1636,61 @@ const page = () => {
 
                                                     // Validation
                                                     if (!value.trim()) {
-                                                        setValidation(prev => ({ ...prev, lead: "Lead paragraph is required" }));
+                                                        setValidation((prev) => ({
+                                                            ...prev,
+                                                            lead: "Lead paragraph is required",
+                                                        }));
                                                     } else if (value.length > 100) {
-                                                        setValidation(prev => ({ ...prev, lead: "Lead paragraph cannot exceed 100 characters" }));
+                                                        setValidation((prev) => ({
+                                                            ...prev,
+                                                            lead: "Lead paragraph cannot exceed 100 characters",
+                                                        }));
                                                     } else {
-                                                        setValidation(prev => ({ ...prev, lead: "" }));
+                                                        setValidation((prev) => ({ ...prev, lead: "" }));
                                                     }
                                                 }}
-                                                className={`text-lg font-medium resize-none border-2 focus:border-blue-500  `}
+                                                className={`w-full text-lg font-medium resize-none border-2 rounded-lg px-4 py-3 shadow-sm transition-all duration-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 ${validation.lead ? "border-red-400 bg-red-50/60" : "border-gray-300 bg-white"
+                                                    }`}
                                                 rows={3}
                                                 placeholder="Enter lead paragraph..."
                                                 disabled={isDeleting || articleSaving}
                                             />
+                                            {/* Validation Message */}
                                             {validation.lead && (
-                                                <p className="text-red-500 text-sm">{validation.lead}</p>
+                                                <p className="text-red-500 text-sm font-medium animate-fadeIn">
+                                                    {validation.lead}
+                                                </p>
                                             )}
                                         </div>
                                     ) : (
                                         <div>
                                             <div
-                                                className="group relative cursor-text hover:bg-gray-50 p-2 rounded-md transition-colors"
+                                                className="group relative cursor-text hover:bg-gray-50/80 px-3 py-3 rounded-lg transition-all duration-300 border border-transparent hover:border-gray-200"
                                                 onClick={() => setIsEditingLeadParagraph(true)}
                                             >
-                                                <p className={`text-lg font-medium leading-relaxed  `}>
+                                                <p
+                                                    className={`text-lg font-medium leading-relaxed text-gray-700 group-hover:text-blue-600 transition-colors duration-300 ${!editedLeadParagraph ? "text-gray-400 italic" : ""
+                                                        }`}
+                                                >
                                                     {editedLeadParagraph || "Click to add lead paragraph..."}
                                                 </p>
-                                                <Edit3 className="w-4 h-4 absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+
+                                                {/* Edit Icon */}
+                                                <Edit3 className="w-4 h-4 absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 text-gray-400 hover:text-gray-600" />
                                             </div>
-                                            {/* Show validation even when not editing */}
+
+                                            {/* Validation Message */}
                                             {validation.lead && (
-                                                <p className="text-red-500 text-sm mt-1">{validation.lead}</p>
+                                                <p className="text-red-500 text-sm mt-1 font-medium animate-fadeIn pl-4">
+                                                    {validation.lead}
+                                                </p>
                                             )}
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    {/* Main Content */}
                                     <div className="lg:col-span-2 space-y-6 text-justify">
                                         <div>
                                             {isEditingContent ? (
@@ -1682,84 +1704,135 @@ const page = () => {
 
                                                             // Validation
                                                             if (!value.trim()) {
-                                                                setValidation(prev => ({ ...prev, content: "Main content is required" }));
-                                                            } else if (value.length > 1000) { // optional length limit
-                                                                setValidation(prev => ({ ...prev, content: "Content cannot exceed 1000 characters" }));
+                                                                setValidation((prev) => ({
+                                                                    ...prev,
+                                                                    content: "Main content is required",
+                                                                }));
+                                                            } else if (value.length > 1000) {
+                                                                setValidation((prev) => ({
+                                                                    ...prev,
+                                                                    content: "Content cannot exceed 1000 characters",
+                                                                }));
                                                             } else {
-                                                                setValidation(prev => ({ ...prev, content: "" }));
+                                                                setValidation((prev) => ({ ...prev, content: "" }));
                                                             }
                                                         }}
-                                                        className={`resize-none border-2 focus:border-blue-500 min-h-[200px]  `}
+                                                        className={`w-full resize-none border-2 rounded-lg px-4 py-3 shadow-sm transition-all duration-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 min-h-[200px] ${validation.content
+                                                            ? "border-red-400 bg-red-50/60"
+                                                            : "border-gray-300 bg-white"
+                                                            }`}
                                                         rows={8}
                                                         placeholder="Enter main article content..."
                                                         disabled={isDeleting || articleSaving}
                                                     />
-                                                    {validation.content && <p className="text-red-500 text-sm">{validation.content}</p>}
+                                                    {validation.content && (
+                                                        <p className="text-red-500 text-sm font-medium animate-fadeIn">
+                                                            {validation.content}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <>
-
                                                     <div
-                                                        className="group relative cursor-text hover:bg-gray-50 p-3 rounded-md transition-colors min-h-[200px]"
+                                                        className="group relative cursor-text hover:bg-gray-50/80 px-4 py-3 rounded-lg transition-all duration-300 border border-transparent hover:border-gray-200 min-h-[200px]"
                                                         onClick={() => setIsEditingContent(true)}
                                                     >
-                                                        <div
-                                                            className={`text-gray-700 leading-relaxed whitespace-pre-wrap  `}
-                                                        >
+                                                        <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                                                             {editedContent || "Click to add main content..."}
                                                         </div>
-                                                        <Edit3 className="w-4 h-4 absolute top-3 right-3 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
-
+                                                        <Edit3 className="w-5 h-5 absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 text-gray-400 hover:text-gray-600" />
                                                     </div>
-                                                    {validation.content && <p className="text-red-500 text-sm mt-1">{validation.content}</p>}
+                                                    {validation.content && (
+                                                        <p className="text-red-500 text-sm mt-1 font-medium animate-fadeIn pl-4">
+                                                            {validation.content}
+                                                        </p>
+                                                    )}
                                                 </>
                                             )}
                                         </div>
                                     </div>
 
+                                    {/* Sidebar */}
                                     <div className="lg:col-span-1 space-y-6">
-                                        <div className="bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
-                                            <div className="bg-gray-200 px-4 py-3 border-b border-gray-200">
-                                                <h3 className="font-bold text-gray-800">Key Facts</h3>
+                                        {/* Key Facts */}
+                                        <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                                            <div className="bg-gray-100 px-4 py-3 border-b">
+                                                <h3 className="font-semibold text-gray-800">Key Facts</h3>
                                             </div>
                                             {isEditingKeyFacts ? (
                                                 <div className="p-4 space-y-2">
-                                                    <Textarea ref={keyFactsRef} value={editedKeyFacts} onChange={(e) => setEditedKeyFacts(e.target.value)} className="text-sm resize-none border-2 border-blue-300 focus:border-blue-500 bg-white" rows={6} placeholder="Enter key facts (one per line)..." disabled={isDeleting || articleSaving} />
+                                                    <Textarea
+                                                        ref={keyFactsRef}
+                                                        value={editedKeyFacts}
+                                                        onChange={(e) => setEditedKeyFacts(e.target.value)}
+                                                        className="text-sm resize-none border-2 rounded-lg px-3 py-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 shadow-sm"
+                                                        rows={6}
+                                                        placeholder="Enter key facts (one per line)..."
+                                                        disabled={isDeleting || articleSaving}
+                                                    />
                                                 </div>
                                             ) : (
-                                                <div className="group relative cursor-text hover:bg-gray-100 p-4 transition-colors" onClick={() => setIsEditingKeyFacts(true)}>
+                                                <div
+                                                    className="group relative cursor-text hover:bg-gray-50 p-4 transition-colors"
+                                                    onClick={() => setIsEditingKeyFacts(true)}
+                                                >
                                                     {formatKeyFacts(editedKeyFacts).length > 0 ? (
                                                         <ul className="space-y-2 list-disc pl-5">
                                                             {formatKeyFacts(editedKeyFacts).map((fact, index) => (
-                                                                <li key={index} className="text-sm text-gray-700 leading-relaxed">{fact}</li>
+                                                                <li
+                                                                    key={index}
+                                                                    className="text-sm text-gray-700 leading-relaxed"
+                                                                >
+                                                                    {fact}
+                                                                </li>
                                                             ))}
                                                         </ul>
                                                     ) : (
-                                                        <p className="text-sm text-gray-500 italic">Click to add key facts...</p>
+                                                        <p className="text-sm text-gray-500 italic">
+                                                            Click to add key facts...
+                                                        </p>
                                                     )}
-                                                    <Edit3 className="w-4 h-4 absolute top-4 right-4 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                                    <Edit3 className="w-4 h-4 absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 text-gray-400 hover:text-gray-600" />
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg overflow-hidden">
+
+                                        {/* Quote Block */}
+                                        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg overflow-hidden shadow-sm">
                                             {isEditingQuoteBlock ? (
                                                 <div className="p-4 space-y-2">
-                                                    <Textarea ref={quoteBlockRef} value={editedQuoteBlock} onChange={(e) => setEditedQuoteBlock(e.target.value)} className="text-lg italic resize-none border-2 border-blue-300 focus:border-blue-500 bg-white" rows={3} placeholder="Enter quote..." disabled={isDeleting || articleSaving} />
+                                                    <Textarea
+                                                        ref={quoteBlockRef}
+                                                        value={editedQuoteBlock}
+                                                        onChange={(e) => setEditedQuoteBlock(e.target.value)}
+                                                        className="text-lg italic resize-none border-2 rounded-lg px-3 py-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 shadow-sm"
+                                                        rows={3}
+                                                        placeholder="Enter quote..."
+                                                        disabled={isDeleting || articleSaving}
+                                                    />
                                                 </div>
                                             ) : (
-                                                <div className="group relative cursor-text hover:bg-blue-100 p-4 transition-colors" onClick={() => setIsEditingQuoteBlock(true)}>
+                                                <div
+                                                    className="group relative cursor-text hover:bg-blue-100 p-4 transition-colors"
+                                                    onClick={() => setIsEditingQuoteBlock(true)}
+                                                >
                                                     <blockquote className="text-lg italic text-gray-700 relative">
-                                                        <span className="text-4xl text-blue-400 absolute -top-2 -left-1">"</span>
-                                                        <span className="pl-6 block">{editedQuoteBlock || "Click to add quote..."}</span>
-                                                        <span className="text-4xl text-blue-400 absolute -bottom-2 -right-1">"</span>
+                                                        <span className="text-4xl text-blue-400 absolute -top-2 -left-1">
+                                                            "
+                                                        </span>
+                                                        <span className="pl-6 block">
+                                                            {editedQuoteBlock || "Click to add quote..."}
+                                                        </span>
+                                                        <span className="text-4xl text-blue-400 absolute -bottom-2 -right-1">
+                                                            "
+                                                        </span>
                                                     </blockquote>
-                                                    <Edit3 className="w-4 h-4 absolute top-4 right-4 opacity-0 group-hover:opacity-50 transition-opacity text-gray-400" />
+                                                    <Edit3 className="w-4 h-4 absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 text-gray-400 hover:text-gray-600" />
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-
 
                                 <div className="flex items-center justify-between text-sm text-gray-600 pt-6 border-t border-gray-200 mt-6 overflow-hidden">
                                     <div className="flex items-center space-x-4 min-w-0">
@@ -1768,6 +1841,7 @@ const page = () => {
                                         <span className="truncate">Source: TPI News</span>
                                     </div>
                                 </div>
+
                                 <div className="mt-4">
                                     <label htmlFor="ctaInput" className="block text-sm font-bold text-gray-700 space-y-2  ">
                                         CTA Title
@@ -1783,6 +1857,7 @@ const page = () => {
                                         </div>
                                     )}
                                 </div>
+
                                 <div className="mt-4">
                                     {isEditingCtaLink ? (
                                         <div className="space-y-2 relative">
@@ -1793,7 +1868,7 @@ const page = () => {
                                                     setEditedCtaLink(e.target.value);
                                                     validateUrl(e.target.value);
                                                 }}
-                                                className={`border-2 ${isValidUrl === false
+                                                className={`pr-8 border-2 ${isValidUrl === false
                                                     ? "border-red-400 focus:border-red-600"
                                                     : isValidUrl === true
                                                         ? "border-green-400 focus:border-green-600"
@@ -1803,8 +1878,8 @@ const page = () => {
                                                 disabled={isDeleting || articleSaving}
                                             />
 
-                                            {/* Validation status */}
-                                            <div className="absolute top-2 right-2">
+                                            {/* Status Icon */}
+                                            <div className="absolute top-1/2 right-3 -translate-y-1/2">
                                                 {validating && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
                                                 {!validating && isValidUrl === true && (
                                                     <CheckCircle className="w-4 h-4 text-green-500" />
@@ -1813,6 +1888,11 @@ const page = () => {
                                                     <XCircle className="w-4 h-4 text-red-500" />
                                                 )}
                                             </div>
+
+                                            {/* Error message */}
+                                            {isValidUrl === false && (
+                                                <p className="text-red-500 text-xs">Please enter a valid URL.</p>
+                                            )}
                                         </div>
                                     ) : (
                                         <div
@@ -1823,7 +1903,7 @@ const page = () => {
                                                 href={editedCtaLink}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-blue-800 hover:text-blue-800 text-sm hover:underline block"
+                                                className="text-blue-700 hover:text-blue-800 text-sm hover:underline block truncate"
                                                 onClick={(e) => e.preventDefault()}
                                             >
                                                 {editedCtaLink || "Click to add CTA link..."}
@@ -1832,7 +1912,6 @@ const page = () => {
                                         </div>
                                     )}
                                 </div>
-
 
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[#D5ECFF] rounded-lg px-4 py-3 mt-6 space-y-3 sm:space-y-0 sm:gap-4">
                                     <div className="flex items-center space-x-2">
@@ -1860,25 +1939,22 @@ const page = () => {
                                             <span className="text-xs">{articleSaving ? "Saving..." : "Save"}</span>
                                         </Button>
 
-                                        {/* Publish / Unpublish Button */}
-
-
-                                        {
-                                            //@ts-ignore
-                                              (currentArticle?.is_newsletter === 0) && <>
-                                                {currentArticle?.is_newsletter ? (
-                                                    <Button
-                                                        onClick={handleUnpublish}
-                                                        disabled={articleSaving || isDeleting}
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 bg-transparent border-[#171A39] text-[#171A39] hover:bg-[#171A39]/10"
-                                                    >
-                                                        <img src="/Frame.svg" alt="Unpublish" className="w-4 h-4" />
-                                                        <span className="text-xs">Remove</span>
-                                                    </Button>
-                                                ) : (
-                                                    <Button
+                                        {currentArticle?.is_newsletter ? (
+                                            <Button
+                                                onClick={handleUnpublish}
+                                                disabled={articleSaving || isDeleting}
+                                                size="sm"
+                                                variant="outline"
+                                                className="flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 bg-transparent border-[#171A39] text-[#171A39] hover:bg-[#171A39]/10"
+                                            >
+                                                <img src="/Frame.svg" alt="Unpublish" className="w-4 h-4" />
+                                                <span className="text-xs">Remove</span>
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                {
+                                                    //@ts-ignore
+                                                    currentArticle?.is_newsletter === 0 && <Button
                                                         onClick={handlePublish}
                                                         size="sm"
                                                         variant="outline"
@@ -1887,9 +1963,12 @@ const page = () => {
                                                         <img src="/Frame.svg" alt="Publish" className="w-4 h-4" />
                                                         <span className="text-xs">Add</span>
                                                     </Button>
-                                                )}
+
+                                                }
+
                                             </>
-                                        }
+
+                                        )}
 
 
                                         {/* Export PDF Button */}
