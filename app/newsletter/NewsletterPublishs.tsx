@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Mail, Phone, Shield, Globe, Printer } from 'lucide-react';
+import { Mail, Phone, Shield, Globe, Printer, History } from 'lucide-react';
 import axios from 'axios';
+import Link from 'next/link';
 
 interface FullArticle {
   id: string;
@@ -20,7 +21,7 @@ interface FullArticle {
   image_url: string;
   is_auto_generated?: boolean;
   conversation_session?: string;
-  cta_url?:string;
+  cta_url?: string;
 }
 
 
@@ -91,7 +92,7 @@ function NewsletterPublishs() {
         tags: article.tags || "",
         created_at: article.updated_at || article.created_at || new Date().toISOString(),
         cta: article.cta || "",
-         cta_url :article.cta_url||"",
+        cta_url: article.cta_url || "",
       }));
       const allArticleIds = transformedArticles.map((a: any) => a.id);
       setArticleIds(allArticleIds);
@@ -141,8 +142,8 @@ function NewsletterPublishs() {
         tags: article.tags || "",
         created_at: article.updated_at || article.created_at || new Date().toISOString(),
         cta: article.cta || "",
-        cta_url :article.cta_url||"",
-        
+        cta_url: article.cta_url || "",
+
       }));
       const allArticleIds = transformedArticles.map((a: any) => a.id);
       setArticleIds(allArticleIds);
@@ -209,7 +210,7 @@ function NewsletterPublishs() {
           <section className="mb-8 p-0 rounded-lg">
             <h2
               className="text-2xl font-bold mb-4 text-gray-800 cursor-text"
-             
+
             >
               {editableMessageTitle ?? "N/A"}
             </h2>
@@ -218,7 +219,7 @@ function NewsletterPublishs() {
 
             <p
               className="text-lg text-gray-700 leading-relaxed cursor-text"
-             
+
             >
               {editableMessage ?? "N/A"}
             </p>
@@ -246,7 +247,7 @@ function NewsletterPublishs() {
                     <span className="text-lg text-gray-800  ">{article.title}</span>
                   </li>
                 ))}
-                 
+
               </ul>
             </div>
           </section>
@@ -368,6 +369,16 @@ function NewsletterPublishs() {
               </div>
 
               <img src="/mainLogo.png" alt="Logo" className="h-24 mt-4 md:mt-0" />
+            </div>
+
+            <div className="flex justify-center mt-6">
+              <Link
+                href="/past-newsletters"
+                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200"
+              >
+                <History className="w-4 h-4" />
+                View Past Newsletters
+              </Link>
             </div>
           </div>
         </div>
