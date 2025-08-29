@@ -119,6 +119,8 @@ const page = () => {
     const [articleDetailError, setArticleDetailError] = useState<string | null>(null);
     const [newsletterLoader, setnewsLetterLoader] = useState(true)
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const [loadingArticles, setLoadingArticles] = useState<{ [key: string]: boolean }>({});
+
 
     const [validation, setValidation] = useState({
         title: "",
@@ -930,7 +932,8 @@ const page = () => {
     };
 
     const remove = async (item: Article) => {
-        handleUnpublish()
+        setLoadingArticles((prev) => ({ ...prev, [item.id]: true }));
+        handleUnpublish();
         try {
             const updatedArticle = { ...currentArticle, is_newsletter: 0 };
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${item.id}/`, {
@@ -950,19 +953,20 @@ const page = () => {
                 throw new Error("Failed to update article newsletter status");
             }
             const savedArticle = await response.json();
-
             setCurrentArticle(savedArticle);
-            setSaveSuccess("Article unpublished successfully!");
-            setTimeout(() => setSaveSuccess(null), 2000);
-            fetchArticles()
+
+            fetchArticles();
         } catch (err) {
             setError(`Failed to unpublish article: ${err instanceof Error ? err.message : "Unknown error"}`);
             clearError();
             console.error("Error unpublishing article:", err);
         } finally {
+            setSaveSuccess("Article unpublished successfully!");
+            setTimeout(() => setSaveSuccess(null), 2000);
+            setLoadingArticles((prev) => ({ ...prev, [item.id]: false }));
             setArticleSaving(false);
         }
-    }
+    };
 
     const addNewsLetter = async (id: string) => {
         if (!token) {
@@ -970,25 +974,16 @@ const page = () => {
             clearError();
             return;
         }
-
+        setLoadingArticles((prev) => ({ ...prev, [id]: true }));
         setArticleSaving(true);
         setSaveSuccess(null);
         try {
-            // Save the current article if it’s being edited
             if (currentArticle) {
                 await handleSaveArticle();
             }
-            // Fetch full article details
             const fullArticle = await fetchArticleDetails(id);
-            if (!fullArticle) {
-                throw new Error(`Failed to fetch details for article ${id}`);
-            }
-            // Update newsletter status
-            const updatedArticle = {
-                ...fullArticle,
-                is_newsletter: 1,
-                cta_url: editedCtaLink,
-            };
+            if (!fullArticle) throw new Error(`Failed to fetch details for article ${id}`);
+            const updatedArticle = { ...fullArticle, is_newsletter: 1, cta_url: editedCtaLink };
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${id}/`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
@@ -1009,17 +1004,18 @@ const page = () => {
             setCurrentArticle(savedArticle);
             setSaveSuccess("Article published successfully!");
             setNewsletterReFetch((prev) => prev + 1);
-            toast.success("Newsletter Added successfully!");
-            fetchArticles()
 
+            fetchArticles();
         } catch (err) {
             setError(`Failed to publish article: ${err instanceof Error ? err.message : "Unknown error"}`);
             clearError();
             console.error("Error publishing article:", err);
         } finally {
+            toast.success("Newsletter Added successfully!");
+            setLoadingArticles((prev) => ({ ...prev, [id]: false }));
             setArticleSaving(false);
         }
-    }
+    };
 
     useEffect(() => {
         const handleStorage = (event: StorageEvent) => {
@@ -1292,12 +1288,12 @@ const page = () => {
                                                                             </div>
 
                                                                             {/* Right side: Add / Remove */}
-                                                                            {article.is_newsletter ? (
+
+                                                                            {loadingArticles[article.id] ? (
+                                                                                <CgSpinner className="animate-spin w-5 h-5 text-gray-500" />
+                                                                            ) : article.is_newsletter ? (
                                                                                 <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        remove(article);
-                                                                                    }}
+                                                                                    onClick={(e) => { e.stopPropagation(); remove(article); }}
                                                                                     className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full shadow-sm hover:shadow-md transition flex-shrink-0"
                                                                                     title="Remove from Newsletter"
                                                                                 >
@@ -1305,16 +1301,14 @@ const page = () => {
                                                                                 </button>
                                                                             ) : (
                                                                                 <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        addNewsLetter(article.id);
-                                                                                    }}
+                                                                                    onClick={(e) => { e.stopPropagation(); addNewsLetter(article.id); }}
                                                                                     className="bg-[#171A39] hover:bg-[#22264f] text-white p-1 rounded-full shadow-sm hover:shadow-md transition flex-shrink-0"
                                                                                     title="Add to Newsletter"
                                                                                 >
                                                                                     <Plus className="w-3 h-3" />
                                                                                 </button>
                                                                             )}
+
                                                                         </div>
                                                                     </div>
                                                                 );
