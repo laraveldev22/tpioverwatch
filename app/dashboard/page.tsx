@@ -17,6 +17,7 @@ import { FiMail } from 'react-icons/fi';
 import { v4 as uuidv4 } from "uuid"; // if using uuid library
 import toast from "react-hot-toast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { useClickOutside } from '@/lib/useClickOutside';
 
 
 const articleCategories = {
@@ -53,20 +54,12 @@ interface ChatMessage {
     role: "user" | "assistant"
     content: string
 }
-// Make the hook generic for any HTMLElement type
-function useClickOutside<T extends HTMLElement>(ref: RefObject<T>, callback: () => void) {
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (ref.current && !ref.current.contains(event.target as Node)) {
-                callback();
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [ref, callback]);
-}
+
+ 
 
 const page = () => {
+
+
     const [searchQuery, setSearchQuery] = useState("");
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -74,7 +67,6 @@ const page = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [currentArticle, setCurrentArticle] = useState<FullArticle | null>(null);
-    console.log(currentArticle, "currentArticle")
     const [articleSaving, setArticleSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -87,7 +79,6 @@ const page = () => {
     const [isEditingQuoteBlock, setIsEditingQuoteBlock] = useState(false);
     const [isEditingCta, setIsEditingCta] = useState(false);
     const [isEditingCtaLink, setIsEditingCtaLink] = useState(false);
-
     const [editedTitle, setEditedTitle] = useState("");
     const [editedByline, setEditedByline] = useState("");
     const [editedLeadParagraph, setEditedLeadParagraph] = useState("");
@@ -97,31 +88,19 @@ const page = () => {
     const [editedCta, setEditedCta] = useState("");
     const [editedCtaLink, setEditedCtaLink] = useState("");
     const [editedTags, setEditedTags] = useState("");
-
     const [newsletters, setNewsLetters] = useState<Article[]>([]);
-    const titleRef = useRef<HTMLTextAreaElement>(null);
-    const bylineRef = useRef<HTMLInputElement>(null);
-    const leadParagraphRef = useRef<HTMLTextAreaElement>(null);
-    const contentRef = useRef<HTMLTextAreaElement>(null);
-    const keyFactsRef = useRef<HTMLTextAreaElement>(null);
-    const quoteBlockRef = useRef<HTMLTextAreaElement>(null);
-    const ctaRef = useRef<HTMLInputElement>(null);
     const [refetch, setRefetch] = useState(0)
     const [newslettReFetch, setNewsletterReFetch] = useState(0)
     const [articlesLoading, setArticlesLoading] = useState(true)
     const [validating, setValidating] = useState(false);
     const [isValidUrl, setIsValidUrl] = useState<null | boolean>(null);
     const [imgLoading, setImgLoading] = useState(false);
-    const [articleData, setArticleData] = useState<{ [key: string]: Article[] }>({
-        A: [], B: [], C: [], D: [],
-    });
+    const [articleData, setArticleData] = useState<{ [key: string]: Article[] }>({ A: [], B: [], C: [], D: [] });
     const [articleDetailLoading, setArticleDetailLoading] = useState(false);
     const [articleDetailError, setArticleDetailError] = useState<string | null>(null);
     const [newsletterLoader, setnewsLetterLoader] = useState(true)
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [loadingArticles, setLoadingArticles] = useState<{ [key: string]: boolean }>({});
-
-
     const [validation, setValidation] = useState({
         title: "",
         image: "",
@@ -130,27 +109,27 @@ const page = () => {
         content: "",
     });
 
-    //@ts-ignore
+
+    const titleRef = useRef<HTMLTextAreaElement>(null);
+    const bylineRef = useRef<HTMLInputElement>(null);
+    const leadParagraphRef = useRef<HTMLTextAreaElement>(null);
+    const contentRef = useRef<HTMLTextAreaElement>(null);
+    const keyFactsRef = useRef<HTMLTextAreaElement>(null);
+    const quoteBlockRef = useRef<HTMLTextAreaElement>(null);
+    const ctaRef = useRef<HTMLInputElement>(null);
+ 
     useClickOutside(titleRef, () => setIsEditingTitle(false));
-    //@ts-ignore
     useClickOutside(bylineRef, () => setIsEditingByline(false));
-    //@ts-ignore
     useClickOutside(leadParagraphRef, () => setIsEditingLeadParagraph(false));
-    //@ts-ignore
     useClickOutside(contentRef, () => setIsEditingContent(false));
-    //@ts-ignore
-    //@ts-ignore
     useClickOutside(keyFactsRef, () => setIsEditingKeyFacts(false));
-    //@ts-ignore
     useClickOutside(quoteBlockRef, () => setIsEditingQuoteBlock(false));
-    //@ts-ignore
     useClickOutside(ctaRef, () => setIsEditingCta(false));
-    //@ts-ignore
     useClickOutside(ctaRef, () => setIsEditingCtaLink(false));
 
-
-
     const router = useRouter();
+
+
     // On save validation
     const validateBeforeSave = () => {
         let valid = true;
@@ -191,7 +170,6 @@ const page = () => {
         }
         return [];
     }, []);
-
 
     const clearError = useCallback(() => setTimeout(() => setError(null), 5000), []);
 
@@ -260,7 +238,6 @@ const page = () => {
             setArticleDetailLoading(false);
         }
     }, [token, router, clearError]);
-
 
     const handleDrop = async (dropIndex: number) => {
         if (draggedIndex === null) return;
@@ -359,7 +336,7 @@ const page = () => {
             formData.append("file", file);
             formData.append("upload_preset", "tpi-overwatch-v2");
 
-            // ✅ dynamic unique ID
+            //  dynamic unique ID
             const uniqueId = `${uuidv4()}_${Date.now()}`;
             formData.append("public_id", `article_${uniqueId}`);
             formData.append("folder", "tpi");
@@ -539,7 +516,6 @@ const page = () => {
         URL.revokeObjectURL(url);
         handleExportPDF();
     };
-
 
     const handleSaveArticle = async () => {
         if (!token) {
@@ -1023,7 +999,6 @@ const page = () => {
                 try {
                     const data = JSON.parse(event.newValue);
                     if (data.page === "dashboard") {
-
                         fetchNewsletters();
                     }
                 } catch (err) {
@@ -1040,7 +1015,14 @@ const page = () => {
         fetchNewsletters()
     }, [newslettReFetch]);
 
-    useEffect(() => { setArticlesLoading(true); fetchArticles(); }, [])
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+        if (token) {
+            setToken(token)
+            setArticlesLoading(true);
+            fetchArticles();
+        }
+    }, [])
 
     useEffect(() => {
         if (currentArticle) {
@@ -1119,12 +1101,6 @@ const page = () => {
             localStorage.setItem("publishedArticleIds", JSON.stringify([]));
         }
     }, [router]);
-
-    useEffect(() => {
-        const token = localStorage.getItem("token")
-        setToken(token)
-    }, [])
-
 
 
     return (

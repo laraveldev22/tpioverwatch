@@ -37,13 +37,10 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [status, setStatus] = useState<SourceStatus[] | null>(null);
-  console.log(status, "status")
-
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [elapsed, setElapsed] = useState(0); // seconds passed
   const ESTIMATED_TIME = 15 * 60; // 15 mins in seconds
-
   const [conversationLoading, setConversationLoading] = useState(true);
   const [sourceLoading, setSourceLoading] = useState<{ [key: string]: boolean }>({
     "Department of Veteran Affairs (DVA)": false,
@@ -56,6 +53,9 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   const [userData, setUserData] = useState<any>(null);
   const [conversationError, setConversationError] = useState<string | null>(null);
   const [fetchSourceStatusLoader, setFetchSourceStatusLoader] = useState(true)
+  const [progress, setProgress] = useState(0); // progress percentage for auto-generate
+
+  console.log(progress,"progress")
   // Menu configuration
   const menuItems = [
     { name: "Home", icon: <FaHome />, path: "/dashboard" },
@@ -141,29 +141,39 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
             Authorization: `Token ${token}`,
             "Content-Type": "application/json",
           },
-          responseType: "blob", // if backend sends file
+          responseType: "blob",
+          onDownloadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              console.log("Download Progress:", percent, "%");
+             
+              setProgress(percent);
+            }
+          },
         }
       );
 
-      console.log("Generated Articles:", response);
-
-      // 🔽 File download trigger
-      const blob = new Blob([response.data], { type: "application/pdf" }); // adjust MIME type
+      // File download trigger
+      const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `generated-articles-${new Date().toISOString()}.pdf`);
+      link.setAttribute(
+        "download",
+        `generated-articles-${new Date().toISOString()}.pdf`
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      // refresh UI
       route.refresh();
     } catch (err) {
       console.error("Error generating articles:", err);
     }
     setLoading(false);
   };
+
+
   const fetchSourceStatus = async () => {
     setFetchSourceStatusLoader(true)
     const token = localStorage.getItem("token");
@@ -218,39 +228,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
     }
   };
 
-  const handleDownloadCSV = (sourceName: string, sourceKey: string) => {
-    // Example: Build CSV from the data in status
-    // You can call an API here instead if backend gives CSV
 
-    const source = status && status.find((s) => s.source_key === sourceKey);
-    if (!source) return;
-
-    // Define CSV headers
-    const headers = ["Source Name", "Source Key", "Last Synced At"];
-
-    // Define CSV row
-    const rows = [
-      [
-        source.source_name,
-        source.source_key,
-        new Date(source.last_synced_at).toLocaleString("en-GB"),
-      ],
-    ];
-
-    // Convert to CSV string
-    const csvContent =
-      [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
-
-    // Create a Blob and trigger download
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${sourceName}_data.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
