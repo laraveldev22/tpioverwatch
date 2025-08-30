@@ -4,9 +4,7 @@ import { GeistMono } from 'geist/font/mono'
 import { TopLoader } from './RootLayout';
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-
 import './globals.css'
-
 
 export const metadata: Metadata = {
   title: 'TPI - Veterans Overwatch ',
@@ -34,8 +32,8 @@ export default function RootLayout({
       <body suppressHydrationWarning={true}>
         {children}
         <TopLoader />
-        <Analytics/>
-        <SpeedInsights/>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
