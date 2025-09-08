@@ -18,12 +18,16 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ✅ Handle special redirect for newsletter slug
-  if (url.pathname === "/news-letter" && url.searchParams.get("slug") === "vo2025w362") {
-    const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/newsletter";
-    redirectUrl.searchParams.set("slug", "vo2025w3537");
-    return NextResponse.redirect(redirectUrl);
+  // check if user opens /news-letter with slug=vo2025w362
+
+  if (url.pathname === "/news-letter") {
+    const slug = url.searchParams.get("slug");
+
+    if (slug) {
+      url.pathname = "/newsletter"; // change only path
+      url.searchParams.set("slug", slug); // reuse same slug dynamically
+      return NextResponse.redirect(url);
+    }
   }
 
   // ✅ Allow all routes that START with a public path
