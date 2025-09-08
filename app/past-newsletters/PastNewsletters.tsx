@@ -38,18 +38,14 @@ function PastNewsletters() {
   const pageSize = 2; // show 2 months per page
 
   const fetchNewsletters = async () => {
+    
     setLoading(true);
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      setLoading(false);
-      return;
-    }
+     
 
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/newsletters/grouped/`,
-        { headers: { Authorization: `Token ${token}` } }
+        
       );
       setGroupedArticles(response.data);
     } catch (error) {
