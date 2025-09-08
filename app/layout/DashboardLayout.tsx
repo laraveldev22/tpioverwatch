@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic, FaFileCsv } from "react-icons/fa";
+import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic, FaFileCsv, FaUserShield } from "react-icons/fa";
 import { Loader2, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -11,7 +11,7 @@ import { FaRegNewspaper } from "react-icons/fa";
 import axios from "axios";
 import { ImSpinner2 } from "react-icons/im";
 import { CgSpinner } from "react-icons/cg";
-
+import { CiSettings } from "react-icons/ci";
 
 interface DashboardLayoutProps {
   children?: ReactNode;
@@ -55,7 +55,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   const [fetchSourceStatusLoader, setFetchSourceStatusLoader] = useState(true)
   const [progress, setProgress] = useState(0); // progress percentage for auto-generate
 
-  console.log(progress,"progress")
+  console.log(progress, "progress")
   // Menu configuration
   const menuItems = [
     { name: "Home", icon: <FaHome />, path: "/dashboard" },
@@ -146,7 +146,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
             if (progressEvent.total) {
               const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               console.log("Download Progress:", percent, "%");
-             
+
               setProgress(percent);
             }
           },
@@ -462,7 +462,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
             )}
           </button>
           <button
-            onClick={() => route.push("/setting")}
+            onClick={() => route.push("/newsletter-setting")}
             className="w-full flex items-center justify-center gap-2 bg-[#004682] hover:bg-blue-700 text-white px-4 py-2 rounded"
           >
             <FaRegNewspaper /> Newsletter Settings
@@ -533,18 +533,36 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
 
             {/* Dropdown Menu */}
             {profileMenuOpen && (
-              <div className="absolute -right-2 mt-2 w-40 bg-white border rounded-md shadow-lg top-8 z-50">
+              <div className="absolute top-8 -right-2 mt-2 w-48 bg-white border rounded-lg shadow-lg z-50 ">
                 {/* Arrow */}
-                <div className="absolute -top-2 right-3 w-4 h-4 bg-white border-l border-t rotate-45"></div>
+                <div className="absolute -top-2 right-4 w-3 h-3 bg-red border-l border-t rotate-45 z-40"></div>
 
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
+                {/* Menu Items */}
+                <div className="flex flex-col py-2">
+                  {/* Settings */}
+                  <button
+                    onClick={() => route.push("/setting")}
+                    className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                  >
+                    <CiSettings className="text-xl text-gray-600" />
+                    <span className="font-medium">Settings</span>
+                  </button>
+
+                  {/* Divider */}
+                  <div className="border-t my-1 border-gray-200"></div>
+
+                  {/* Logout */}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 transition-colors duration-150"
+                  >
+                    <FaSignOutAlt className="text-xl" />
+                    <span className="font-medium">Logout</span>
+                  </button>
+                </div>
               </div>
             )}
+
           </div>
         </header>
 
