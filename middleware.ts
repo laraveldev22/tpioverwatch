@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicPaths = ['/', '/login', '/signup', '/news-letter'];
+const publicPaths = ['/', '/login', '/signup', '/news-letter', '/newsletter'];
 
 export function middleware(req: NextRequest) {
   const token = req.cookies.get('token')?.value;
@@ -18,6 +18,14 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // ✅ Handle special redirect for newsletter slug
+  if (url.pathname === "/news-letter" && url.searchParams.get("slug") === "vo2025w362") {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = "/newsletter";
+    redirectUrl.searchParams.set("slug", "vo2025w3537");
+    return NextResponse.redirect(redirectUrl);
+  }
+
   // ✅ Allow all routes that START with a public path
   const isPublicPath = publicPaths.some(path => url.pathname.startsWith(path));
 
@@ -26,8 +34,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ✅ Prevent logged-in users from visiting login/signup (but NOT /news-letter)
-  if (token && ['/','/login','/signup'].includes(url.pathname)) {
+  // ✅ Prevent logged-in users from visiting login/signup (but NOT newsletter)
+  if (token && ['/', '/login', '/signup'].includes(url.pathname)) {
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
