@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic, FaFileCsv, FaUserShield } from "react-icons/fa";
+import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic, FaFileCsv, FaUserShield, FaFire } from "react-icons/fa";
 import { Loader2, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -21,7 +21,7 @@ interface DashboardLayoutProps {
 interface SourceStatus {
   source_key: string;
   source_name: string;
-  last_synced_at: string; // ISO date string (e.g., "2025-08-24T11:32:57Z")
+  last_synced_at: string;
   csv_file: string;
 }
 interface ConversationTitle {
@@ -55,13 +55,27 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   const [fetchSourceStatusLoader, setFetchSourceStatusLoader] = useState(true)
   const [progress, setProgress] = useState(0); // progress percentage for auto-generate
 
-  console.log(progress, "progress")
+  // submenu state
+  const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
+  const toggleSubMenu = (name: string) => {
+    setOpenSubMenu(openSubMenu === name ? null : name);
+  };
+
   // Menu configuration
   const menuItems = [
     { name: "Home", icon: <FaHome />, path: "/dashboard" },
     { name: "Article List", icon: <FaFileAlt />, path: "/articles" },
     { name: "Archive", icon: <FaArchive />, path: "/archives" },
-  ];
+    {
+      name: "TPI Social Media Trends",
+      icon: <FaFire />,
+      subMenu: [ {
+          name: "Trending Now",
+          path: "/trending-now",
+          icon: <FaRegNewspaper />,
+        }, {name: "Trends", path: "/trends", icon: <FaRegNewspaper />, }], // 👈 only one sub-item
+    },
+  ]
   const handleSyncClick = async (sourceName: string, endpoint: string) => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -289,17 +303,57 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           <div className="space-y-3   py-4">
             {menuItems.map((item) => {
               const isActive = pathname === item.path;
+              const isSubMenuOpen = openSubMenu === item.name;
+
               return (
-                <button
-                  key={item.path}
-                  onClick={() => route.push(item.path)}
-                  className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition
-              ${isActive ? "bg-[#e8be5a] text-black" : "bg-[#004682] text-white hover:bg-[#003366]"}
-            `}
-                >
-                  {item.icon}
-                  {item.name}
-                </button>
+                <div key={item.name} className="flex flex-col">
+                  <button
+                    onClick={() =>
+                      item.subMenu
+                        ? toggleSubMenu(item.name)
+                        : route.push(item.path!)
+                    }
+                    className={`flex items-center justify-between gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition
+                      ${isActive
+                        ? "bg-[#e8be5a] text-black"
+                        : "bg-[#004682] text-white hover:bg-[#003366]"
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.icon}
+                      {item.name}
+                    </div>
+                    {item.subMenu && (
+                      <span className="ml-auto text-xs">
+                        {isSubMenuOpen ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* SubMenu (only one child) */}
+                  {/* SubMenu */}
+                  {item.subMenu && isSubMenuOpen && (
+                    <div className="ml-6 mt-1 flex flex-col gap-1">
+                      {item.subMenu.map((sub) => (
+                        <button
+                          key={sub.name}
+                          onClick={() => route.push(sub.path)}
+                          className={`flex items-center gap-2 px-3 py-1 text-sm rounded-md text-left
+          ${pathname === sub.path
+                              ? "bg-[#e8be5a] text-black"
+                              : "bg-[#2a2f59] text-gray-200 hover:bg-[#24294f]"
+                            }
+        `}
+                        >
+                          {sub.icon && <span>{sub.icon}</span>}
+                          {sub.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                </div>
               );
             })}
           </div>
