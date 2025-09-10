@@ -73,7 +73,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
           name: "Trending Now",
           path: "/trending-now",
           icon: <FaRegNewspaper />,
-        }, {name: "Trends", path: "/trends", icon: <FaRegNewspaper />, }], // 👈 only one sub-item
+        }, {name: "Social Media Trends", path: "/social-media-trends", icon: <FaRegNewspaper />, }], // 👈 only one sub-item
     },
   ]
   const handleSyncClick = async (sourceName: string, endpoint: string) => {

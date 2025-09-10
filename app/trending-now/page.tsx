@@ -30,24 +30,45 @@ interface Trend {
     delta: number; // ✅ % change
 }
 
+const data: string[] = [
+  "Veteran suicide",
+  "Royal Commission",
+  "VETS Act reform",
+  "Psychedelic therapies",
+  "Sallymen cuts",
+  "Healthcare access",
+  "Pension indexation",
+  "Public identity gap",
+  "Hub funding",
+  "Super scandal",
+  "Aged-care neglect",
+  "RSL funding",
+  "Pokie profits",
+  "Equipment theft",
+  "Policy gap",
+];
+
 const generateDummyData = (): Trend[] => {
     const trends: Trend[] = [];
-    for (let i = 1; i <= 60; i++) {
+
+    data.forEach((item, index) => {
         trends.push({
-            trend: `Trend ${i}`,
-            region: i % 2 === 0 ? "Australia" : "Global",
-            time: i % 3 === 0 ? "Past 48 hours" : "Past week",
-            category: i % 4 === 0 ? "Business" : "Tech",
-            type: i % 5 === 0 ? "Top Trend" : "Regular Trend",
+            trend: item,
+            region: index % 2 === 0 ? "Australia" : "Global",
+            time: index % 3 === 0 ? "Past 48 hours" : "Past week",
+            category: index % 4 === 0 ? "Business" : "Tech",
+            type: index % 5 === 0 ? "Top Trend" : "Regular Trend",
             volume: `${Math.floor(Math.random() * 100 + 1)}K+`,
             started: `${Math.floor(Math.random() * 24 + 1)} hours ago`,
-            breakdown: [`Detail A${i}`, `Detail B${i}`, `Detail C${i}`],
+            breakdown: [`Detail A${index + 1}`, `Detail B${index + 1}`, `Detail C${index + 1}`],
             graphData: Array.from({ length: 8 }, () => Math.floor(Math.random() * 30 + 1)),
             delta: Math.floor(Math.random() * 2000 - 500), // -500% to +1500%
         });
-    }
+    });
+
     return trends;
 };
+
 
 const trendsData: Trend[] = generateDummyData();
 
