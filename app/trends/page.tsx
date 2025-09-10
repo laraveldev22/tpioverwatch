@@ -5,19 +5,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import DashboardLayout from "../layout/DashboardLayout";
 
 const data: string[] = [
-  "milan",
-  "plane crash eyre peninsula",
-  "tesla share price",
-  "rose singer",
-  "full moon",
-  "doja cat",
-  "palau",
-  "asx shares",
-  "gold price",
-  "cnn",
-  "hunter doohan",
-  "newcastle weather",
+  "Veteran suicide",
+  "Royal Commission",
+  "VETS Act reform",
+  "Psychedelic therapies",
+  "Sallymen cuts",
+  "Healthcare access",
+  "Pension indexation",
+  "Public identity gap",
+  "Hub funding",
+  "Super scandal",
+  "Aged-care neglect",
+  "RSL funding",
+  "Pokie profits",
+  "Equipment theft",
+  "Policy gap",
+  "Weather"
 ];
+
 
 const colors: string[] = ["bg-blue-500", "bg-red-500", "bg-green-500", "bg-yellow-400"];
 const getRandomColor = () => colors[Math.floor(Math.random() * colors.length)];
