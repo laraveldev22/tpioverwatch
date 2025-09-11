@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic, FaFileCsv, FaUserShield, FaFire } from "react-icons/fa";
+import { FaBars, FaUserCircle, FaHome, FaSignOutAlt, FaArchive, FaFileAlt, FaCog, FaMagic, FaFileCsv, FaUserShield, FaFire, FaSearch, FaPhotoVideo, FaTemperatureHigh } from "react-icons/fa";
 import { Loader2, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -62,6 +62,7 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
   };
 
   // Menu configuration
+ 
   const menuItems = [
     { name: "Home", icon: <FaHome />, path: "/dashboard" },
     { name: "Article List", icon: <FaFileAlt />, path: "/articles" },
@@ -69,13 +70,18 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
     {
       name: "TPI Social Media Trends",
       icon: <FaFire />,
-      subMenu: [ {
-          name: "Trending Now",
-          path: "/trending-now",
-          icon: <FaRegNewspaper />,
-        }, {name: "Social Media Trends", path: "/social-media-trends", icon: <FaRegNewspaper />, }], // 👈 only one sub-item
+      subMenu: [
+        { name: "Trending Now", path: "/trending-now", icon: <FaRegNewspaper /> },
+        { name: "Social Media Trends", path: "/social-media-trends", icon: <FaRegNewspaper /> },
+        { name: "Searching for Health", path: "/searching-for-health", icon: <FaSearch /> },
+        { name: "GIF Maker", icon: <FaPhotoVideo />, path: "/data-gif-maker" },
+        // 🔥 New Heat Waves submenu
+        { name: "Heat Waves", icon: <FaTemperatureHigh />, path: "/heat-waves" },
+      ],
     },
-  ]
+  ];
+
+
   const handleSyncClick = async (sourceName: string, endpoint: string) => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -334,25 +340,34 @@ export default function DashboardLayout({ children, getPrompts, refetch }: Dashb
                   {/* SubMenu (only one child) */}
                   {/* SubMenu */}
                   {item.subMenu && isSubMenuOpen && (
-                    <div className="ml-6 mt-1 flex flex-col gap-1">
+                    <div className="ml-6 mt-2 flex flex-col gap-1 border-l border-[#3d4970] pl-3 transition-all duration-300 ease-in-out">
                       {item.subMenu.map((sub) => (
                         <button
                           key={sub.name}
                           onClick={() => route.push(sub.path)}
-                          className={`flex items-center gap-2 px-3 py-1 text-sm rounded-md text-left
+                          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md text-left relative group
           ${pathname === sub.path
-                              ? "bg-[#e8be5a] text-black"
-                              : "bg-[#2a2f59] text-gray-200 hover:bg-[#24294f]"
+                              ? "bg-[#e8be5a] text-black font-semibold"
+                              : "bg-[#2a2f59] text-gray-200 hover:bg-[#3c4478]"
                             }
         `}
                         >
-                          {sub.icon && <span>{sub.icon}</span>}
-                          {sub.name}
+                          {/* Icon */}
+                          {sub.icon && (
+                            <span className="text-lg transition-transform group-hover:scale-110">
+                              {sub.icon}
+                            </span>
+                          )}
+
+                          {/* Name */}
+                          <span className="transition-colors">{sub.name}</span>
+
+                          {/* Highlight bar on hover */}
+                          <span className="absolute left-0 top-0 h-full w-1 bg-[#e8be5a] scale-y-0 group-hover:scale-y-100 transition-transform origin-top"></span>
                         </button>
                       ))}
                     </div>
                   )}
-
                 </div>
               );
             })}
