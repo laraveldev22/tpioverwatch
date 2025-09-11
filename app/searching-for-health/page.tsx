@@ -87,8 +87,6 @@ export default function MyMap() {
                                                             value > 80 ? "#CBDCEB" :       // light green (replacing yellow)
                                                                 value > 60 ? "#CBDCEB" :       // green (replacing darker yellow)
                                                                     "#54587B";         // dark green (replacing lightest yellow)
-
-
                                     return (
                                         <Geography
                                             key={geo.rsmKey}
