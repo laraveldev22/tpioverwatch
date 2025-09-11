@@ -58,7 +58,7 @@ export default function AUHeatMap() {
     if (!mapRef.current) return;
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=visualization`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDT0tFXelavZUzMcJSWgKecDPlbDm-PHEU&libraries=visualization`;
     script.async = true;
     script.onload = () => {
       if (!mapRef.current) return;
