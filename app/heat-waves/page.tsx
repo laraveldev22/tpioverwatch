@@ -11,7 +11,7 @@ declare global {
 }
 
 // Generate ~60% coverage
-const generateAustraliaHeatData60 = (baseWeight: number = 25) => {
+const generateAustraliaHeatData60 = (baseWeight: number = 10) => {
   const points: { lat: number; lng: number; weight: number }[] = [];
 
   // Rough bounding box of Australia

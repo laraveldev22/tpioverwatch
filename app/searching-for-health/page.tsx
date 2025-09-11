@@ -44,9 +44,9 @@ export default function MyMap() {
 
     return (
         <DashboardLayout>
-            <div className="max-w-6xl mx-auto p-6 space-y-8">
+            <div className=" mx-auto p-6 space-y-8 bg-[#171A39]">
 
-                <h1 className="text-3xl font-bold">Health Data | Cancer Data Visualization</h1>
+                <h1 className="text-3xl font-bold text-white">Health Data | Cancer Data Visualization</h1>
 
                 <div className="flex space-x-4 mb-4">
                     <button
@@ -64,7 +64,7 @@ export default function MyMap() {
                     </button>
                 </div>
 
-                <div className="w-full h-[550px] my-8 relative">
+                <div className="w-full h-[550px] my-8 relative bg-[#171A39]">
                     <ComposableMap projection="geoMercator"
                         projectionConfig={{
                             scale: 1000, // adjust as needed
@@ -84,9 +84,9 @@ export default function MyMap() {
                                                 value > 140 ? "#E31A1C" :       // lighter red
                                                     value > 120 ? "#FC4E2A" :       // orange-red
                                                         value > 100 ? "#FD8D3C" :       // orange
-                                                            value > 80 ? "#66C266" :       // light green (replacing yellow)
-                                                                value > 60 ? "#33A833" :       // green (replacing darker yellow)
-                                                                    "#1A7D1A";         // dark green (replacing lightest yellow)
+                                                            value > 80 ? "#CBDCEB" :       // light green (replacing yellow)
+                                                                value > 60 ? "#CBDCEB" :       // green (replacing darker yellow)
+                                                                    "#54587B";         // dark green (replacing lightest yellow)
 
 
                                     return (
@@ -123,9 +123,9 @@ export default function MyMap() {
                                 { color: "#E31A1C", label: "141–160" },
                                 { color: "#FC4E2A", label: "121–140" },
                                 { color: "#FD8D3C", label: "101–120" },
-                                { color: "#66C266", label: "81–100" },   // light green
-                                { color: "#33A833", label: "61–80" },    // medium green
-                                { color: "#1A7D1A", label: "<= 60" },    // dark green
+                                { color: "#66C266", label: "81–100" },    
+                                { color: "#33A833", label: "61–80" },    
+                                { color: "#1A7D1A", label: "<= 60" },    
                             ].map(({ color, label }) => (
                                 <div key={label} className="flex items-center space-x-2">
                                     <div className="w-6 h-6" style={{ backgroundColor: color }}></div>
