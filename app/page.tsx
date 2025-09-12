@@ -19,6 +19,7 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
   const [twoFactorSecret, setTwoFactorSecret] = useState<string | null>(null);
+  const [token, setToken] = useState("")
 
   const router = useRouter();
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -41,9 +42,10 @@ export default function SignInPage() {
         return;
       }
 
-      if (data.twoFactorEnabled) {
-        setTwoFactorSecret(data.twoFactorSecret);
+      if (data.user.two_factor_enabled) {
+        setTwoFactorSecret(data.user.two_factor_secret);
         setShow2FA(true);
+        setToken(data.token)
         toast("Enter your 2FA code");
       } else {
         Cookies.set("token", data.token, { expires: 1, path: "/" });
@@ -80,7 +82,9 @@ export default function SignInPage() {
 
     if (verified) {
       toast.success("✅ 2FA Verified! You are logged in.");
-      router.push("/dashboard");
+      localStorage.setItem("token", token);
+      Cookies.set("token", token, { expires: 1, path: "/" });
+      router.refresh();
     } else {
       toast.error("❌ Invalid 2FA code, try again");
     }

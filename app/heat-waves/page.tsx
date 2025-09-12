@@ -2,32 +2,46 @@
 
 import { useEffect, useRef, useState } from "react";
 import DashboardLayout from "../layout/DashboardLayout";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-// 👇 Add this so TS knows about window.google
 declare global {
   interface Window {
     google: typeof google;
   }
 }
+const trendDataG = [
+  { year: "2004", avgWeight: 50, maxWeight: 80, minWeight: 20 },
+  { year: "2008", avgWeight: 60, maxWeight: 90, minWeight: 30 },
+  { year: "2012", avgWeight: 70, maxWeight: 100, minWeight: 40 },
+  { year: "2016", avgWeight: 80, maxWeight: 110, minWeight: 50 },
+  { year: "2020", avgWeight: 90, maxWeight: 120, minWeight: 60 },
+  { year: "2024", avgWeight: 100, maxWeight: 130, minWeight: 70 },
+];
+
 
 // Generate ~60% coverage
 const generateAustraliaHeatData60 = (baseWeight: number = 10) => {
   const points: { lat: number; lng: number; weight: number }[] = [];
 
-  // Rough bounding box of Australia
+  // Australia ka approximate boundary
   const latMin = -44.0;
-  const latMax = -10.0;
-  const lngMin = 112.0;
-  const lngMax = 154.0;
-
-  const latStep = 4.0; // larger step → fewer points
-  const lngStep = 4.0;
+  const latMax = -15.0;
+  const lngMin = 130.0; // thoda tight
+  const lngMax = 153.0; // thoda tight
+  const latStep = 2.0;  // grid thoda dense
+  const lngStep = 2.0;  // grid thoda dense
 
   for (let lat = latMin; lat <= latMax; lat += latStep) {
     for (let lng = lngMin; lng <= lngMax; lng += lngStep) {
-      // Include ~60% of points randomly
-      if (Math.random() < 0.6) {
-        const weight = baseWeight + Math.random() * 30; // random weight for variation
+      // sirf 60% chance ke saath point generate
+      if (Math.random() < 0.1) {
+        const weight = baseWeight + Math.random() * 20;
         points.push({ lat, lng, weight });
       }
     }
@@ -35,6 +49,7 @@ const generateAustraliaHeatData60 = (baseWeight: number = 10) => {
 
   return points;
 };
+
 
 const heatWaveData: Record<number, { lat: number; lng: number; weight: number }[]> = {
   2004: generateAustraliaHeatData60(40),
@@ -45,18 +60,27 @@ const heatWaveData: Record<number, { lat: number; lng: number; weight: number }[
   2024: generateAustraliaHeatData60(100),
 };
 
+// 👉 Convert heatWaveData → chart-friendly format
+const trendData = Object.keys(heatWaveData).map((year) => {
+  const avg =
+    heatWaveData[+year].reduce((sum, p) => sum + p.weight, 0) /
+    heatWaveData[+year].length;
+  return { year, avgWeight: Math.round(avg) };
+});
+
 export default function AUHeatMap() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
-  const [heatmapInstance, setHeatmapInstance] = useState<google.maps.visualization.HeatmapLayer | null>(null);
+  const [heatmapInstance, setHeatmapInstance] =
+    useState<google.maps.visualization.HeatmapLayer | null>(null);
   const [year, setYear] = useState(2004);
   const [isPlaying, setIsPlaying] = useState(false);
   const playInterval = useRef<NodeJS.Timeout | null>(null);
+  const [activeTab, setActiveTab] = useState<"map" | "trend">("map");
 
   // Load Google Maps API
   useEffect(() => {
     if (!mapRef.current) return;
-
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDT0tFXelavZUzMcJSWgKecDPlbDm-PHEU&libraries=visualization`;
     script.async = true;
@@ -88,8 +112,6 @@ export default function AUHeatMap() {
     };
 
     document.body.appendChild(script);
-
-    // ✅ Proper cleanup (must return void | () => void)
     return () => {
       document.body.removeChild(script);
     };
@@ -98,7 +120,6 @@ export default function AUHeatMap() {
   // Update heatmap when year changes
   useEffect(() => {
     if (!mapInstance || !(window as any).google) return;
-
     const data = heatWaveData[year] || [];
 
     const heatmapData = data.map(
@@ -119,7 +140,7 @@ export default function AUHeatMap() {
     ];
 
     if (heatmapInstance) {
-      heatmapInstance.setMap(null); // Remove previous
+      heatmapInstance.setMap(null);
     }
 
     const newHeatmap = new google.maps.visualization.HeatmapLayer({
@@ -150,14 +171,43 @@ export default function AUHeatMap() {
           }
           return nextYear;
         });
-      }, 1200); // Every 1.2 sec
+      }, 1200);
     }
   };
 
   return (
     <DashboardLayout>
       <div style={{ position: "relative", width: "100%", height: "88vh" }}>
-        <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+        {/* MAP VIEW */}
+        <div
+          ref={mapRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            display: activeTab === "map" ? "block" : "none",
+          }}
+        />
+
+        {/* TREND VIEW */}
+        <div
+          className="w-full h-full bg-[#474561] flex items-center justify-center"
+          style={{ display: activeTab === "trend" ? "flex" : "none" }}
+        >
+          <ResponsiveContainer width="95%" height="100%">
+            <LineChart data={trendData}>
+              {/* <CartesianGrid strokeDasharray="3 3" stroke="#8884d8" /> */}
+              <XAxis dataKey="year" stroke="#fff" />
+              {/* <YAxis stroke="#fff" /> */}
+              <Tooltip />
+              {/* <Legend verticalAlign="top" /> */}
+              <Line type="monotone" dataKey="avgWeight" stroke="#E8F0C6" strokeWidth={2} />
+              <Line type="monotone" dataKey="maxWeight" stroke="#FF6B6B" strokeWidth={2} />
+              <Line type="monotone" dataKey="minWeight" stroke="#4ECDC4" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* YEAR LABEL */}
         <div
           style={{
             position: "absolute",
@@ -173,6 +223,8 @@ export default function AUHeatMap() {
         >
           Year: {year}
         </div>
+
+        {/* PLAY BUTTON */}
         <button
           onClick={togglePlay}
           style={{
@@ -190,6 +242,24 @@ export default function AUHeatMap() {
         >
           {isPlaying ? "Pause" : "Play"}
         </button>
+
+        {/* TAB BUTTONS */}
+        <div className="w-[150px] h-[50px] absolute top-3 right-4 grid grid-cols-2 rounded-lg overflow-hidden shadow-lg">
+          <button
+            onClick={() => setActiveTab("map")}
+            className={`text-white font-semibold transition-colors ${activeTab === "map" ? "bg-[#7B7FA8]" : "bg-[#54587B]"
+              }`}
+          >
+            Map
+          </button>
+          <button
+            onClick={() => setActiveTab("trend")}
+            className={`text-white font-semibold transition-colors ${activeTab === "trend" ? "bg-[#7B7FA8]" : " bg-[#54587B]"
+              }`}
+          >
+            Trend
+          </button>
+        </div>
       </div>
     </DashboardLayout>
   );

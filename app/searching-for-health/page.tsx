@@ -48,22 +48,6 @@ export default function MyMap() {
 
                 <h1 className="text-3xl font-bold text-white">Health Data | Cancer Data Visualization</h1>
 
-                <div className="flex space-x-4 mb-4">
-                    <button
-                        onClick={() => setShowHealthMap(true)}
-                        className={`px-4 py-2 rounded ${showHealthMap ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"}`}
-                    >
-                        Interactive Map (Search Interest)
-                    </button>
-
-                    <button
-                        onClick={() => setShowHealthMap(false)}
-                        className={`px-4 py-2 rounded ${!showHealthMap ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"}`}
-                    >
-                        Static Visual (Mortality Rate)
-                    </button>
-                </div>
-
                 <div className="w-full h-[550px] my-8 relative bg-[#171A39]">
                     <ComposableMap projection="geoMercator"
                         projectionConfig={{
