@@ -15,52 +15,93 @@ declare global {
     google: typeof google;
   }
 }
-const trendDataG = [
-  { year: "2004", avgWeight: 50, maxWeight: 80, minWeight: 20 },
-  { year: "2008", avgWeight: 60, maxWeight: 90, minWeight: 30 },
-  { year: "2012", avgWeight: 70, maxWeight: 100, minWeight: 40 },
-  { year: "2016", avgWeight: 80, maxWeight: 110, minWeight: 50 },
-  { year: "2020", avgWeight: 90, maxWeight: 120, minWeight: 60 },
-  { year: "2024", avgWeight: 100, maxWeight: 130, minWeight: 70 },
-];
 
-
-// Generate ~60% coverage
-const generateAustraliaHeatData60 = (baseWeight: number = 10) => {
-  const points: { lat: number; lng: number; weight: number }[] = [];
-
-  // Australia ka approximate boundary
-  const latMin = -44.0;
-  const latMax = -15.0;
-  const lngMin = 130.0; // thoda tight
-  const lngMax = 153.0; // thoda tight
-  const latStep = 2.0;  // grid thoda dense
-  const lngStep = 2.0;  // grid thoda dense
-
-  for (let lat = latMin; lat <= latMax; lat += latStep) {
-    for (let lng = lngMin; lng <= lngMax; lng += lngStep) {
-      // sirf 60% chance ke saath point generate
-      if (Math.random() < 0.1) {
-        const weight = baseWeight + Math.random() * 20;
-        points.push({ lat, lng, weight });
-      }
-    }
-  }
-
-  return points;
-};
-
-
+// ---------------- STATIC AUSTRALIA HEAT DATA ----------------
+// Static dummy heatmap points (Australia ke andar)
+// Static dummy heatmap points (Australia ke andar)
 const heatWaveData: Record<number, { lat: number; lng: number; weight: number }[]> = {
-  2004: generateAustraliaHeatData60(40),
-  2008: generateAustraliaHeatData60(50),
-  2012: generateAustraliaHeatData60(60),
-  2016: generateAustraliaHeatData60(70),
-  2020: generateAustraliaHeatData60(80),
-  2024: generateAustraliaHeatData60(100),
+  2004: [
+    { lat: -28.674625, lng: 130.295658, weight: 40 },
+    { lat: -27.449032, lng: 139.416311, weight: 42 },
+    { lat: -23.848723, lng: 119.292967, weight: 38 },
+    { lat: -33.341056, lng: 141.587895, weight: 45 },
+    { lat: -31.434854, lng: 119.727283, weight: 50 },
+    { lat: -16.300436, lng: 130.006114, weight: 47 },
+    { lat: -19.114388, lng: 135.073143, weight: 44 },
+    { lat: -22.417607, lng: 146.220607, weight: 48 },
+    { lat: -26.165012, lng: 147.234013, weight: 46 },
+    { lat: -30.046739, lng: 147.668329, weight: 49 },
+    { lat: -33.057131, lng: 147.523557, weight: 51 },
+  ],
+  2008: [
+    { lat: -28.674625, lng: 130.295658, weight: 50 },
+    { lat: -27.449032, lng: 139.416311, weight: 52 },
+    { lat: -23.848723, lng: 119.292967, weight: 48 },
+    { lat: -33.341056, lng: 141.587895, weight: 55 },
+    { lat: -31.434854, lng: 119.727283, weight: 53 },
+    { lat: -16.300436, lng: 130.006114, weight: 51 },
+    { lat: -19.114388, lng: 135.073143, weight: 49 },
+    { lat: -22.417607, lng: 146.220607, weight: 54 },
+    { lat: -26.165012, lng: 147.234013, weight: 52 },
+    { lat: -30.046739, lng: 147.668329, weight: 56 },
+    { lat: -33.057131, lng: 147.523557, weight: 58 },
+  ],
+  2012: [
+    { lat: -28.674625, lng: 130.295658, weight: 60 },
+    { lat: -27.449032, lng: 139.416311, weight: 62 },
+    { lat: -23.848723, lng: 119.292967, weight: 58 },
+    { lat: -33.341056, lng: 141.587895, weight: 65 },
+    { lat: -31.434854, lng: 119.727283, weight: 63 },
+    { lat: -16.300436, lng: 130.006114, weight: 61 },
+    { lat: -19.114388, lng: 135.073143, weight: 59 },
+    { lat: -22.417607, lng: 146.220607, weight: 64 },
+    { lat: -26.165012, lng: 147.234013, weight: 62 },
+    { lat: -30.046739, lng: 147.668329, weight: 66 },
+    { lat: -33.057131, lng: 147.523557, weight: 68 },
+  ],
+  2016: [
+    { lat: -28.674625, lng: 130.295658, weight: 70 },
+    { lat: -27.449032, lng: 139.416311, weight: 72 },
+    { lat: -23.848723, lng: 119.292967, weight: 68 },
+    { lat: -33.341056, lng: 141.587895, weight: 75 },
+    { lat: -31.434854, lng: 119.727283, weight: 73 },
+    { lat: -16.300436, lng: 130.006114, weight: 71 },
+    { lat: -19.114388, lng: 135.073143, weight: 69 },
+    { lat: -22.417607, lng: 146.220607, weight: 74 },
+    { lat: -26.165012, lng: 147.234013, weight: 72 },
+    { lat: -30.046739, lng: 147.668329, weight: 76 },
+    { lat: -33.057131, lng: 147.523557, weight: 78 },
+  ],
+  2020: [
+    { lat: -28.674625, lng: 130.295658, weight: 80 },
+    { lat: -27.449032, lng: 139.416311, weight: 82 },
+    { lat: -23.848723, lng: 119.292967, weight: 78 },
+    { lat: -33.341056, lng: 141.587895, weight: 85 },
+    { lat: -31.434854, lng: 119.727283, weight: 83 },
+    { lat: -16.300436, lng: 130.006114, weight: 81 },
+    { lat: -19.114388, lng: 135.073143, weight: 79 },
+    { lat: -22.417607, lng: 146.220607, weight: 84 },
+    { lat: -26.165012, lng: 147.234013, weight: 82 },
+    { lat: -30.046739, lng: 147.668329, weight: 86 },
+    { lat: -33.057131, lng: 147.523557, weight: 88 },
+  ],
+  2024: [
+    { lat: -28.674625, lng: 130.295658, weight: 100 },
+    { lat: -27.449032, lng: 139.416311, weight: 102 },
+    { lat: -23.848723, lng: 119.292967, weight: 98 },
+    { lat: -33.341056, lng: 141.587895, weight: 105 },
+    { lat: -31.434854, lng: 119.727283, weight: 103 },
+    { lat: -16.300436, lng: 130.006114, weight: 101 },
+    { lat: -19.114388, lng: 135.073143, weight: 99 },
+    { lat: -22.417607, lng: 146.220607, weight: 104 },
+    { lat: -26.165012, lng: 147.234013, weight: 102 },
+    { lat: -30.046739, lng: 147.668329, weight: 106 },
+    { lat: -33.057131, lng: 147.523557, weight: 108 },
+  ],
 };
 
-// 👉 Convert heatWaveData → chart-friendly format
+
+// 👉 Chart data
 const trendData = Object.keys(heatWaveData).map((year) => {
   const avg =
     heatWaveData[+year].reduce((sum, p) => sum + p.weight, 0) /
@@ -68,6 +109,7 @@ const trendData = Object.keys(heatWaveData).map((year) => {
   return { year, avgWeight: Math.round(avg) };
 });
 
+// ---------------- COMPONENT ----------------
 export default function AUHeatMap() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
@@ -86,7 +128,6 @@ export default function AUHeatMap() {
     script.async = true;
     script.onload = () => {
       if (!mapRef.current) return;
-
       const map = new google.maps.Map(mapRef.current, {
         zoom: 4.5,
         center: { lat: -25.2744, lng: 133.7751 },
@@ -107,10 +148,8 @@ export default function AUHeatMap() {
           { featureType: "landscape", stylers: [{ color: "#54587B" }] },
         ],
       });
-
       setMapInstance(map);
     };
-
     document.body.appendChild(script);
     return () => {
       document.body.removeChild(script);
@@ -121,13 +160,17 @@ export default function AUHeatMap() {
   useEffect(() => {
     if (!mapInstance || !(window as any).google) return;
     const data = heatWaveData[year] || [];
-
     const heatmapData = data.map(
-      (p) => ({
+      (p) =>
+      ({
         location: new google.maps.LatLng(p.lat, p.lng),
         weight: p.weight,
-      })
+      } as google.maps.visualization.WeightedLocation)
     );
+
+    if (heatmapInstance) {
+      heatmapInstance.setMap(null);
+    }
 
     const gradient = [
       "rgba(56, 48, 66, 0)",
@@ -138,10 +181,6 @@ export default function AUHeatMap() {
       "rgba(254, 247, 206, 0.8)",
       "rgba(255, 252, 211, 0.9)",
     ];
-
-    if (heatmapInstance) {
-      heatmapInstance.setMap(null);
-    }
 
     const newHeatmap = new google.maps.visualization.HeatmapLayer({
       data: heatmapData,
@@ -154,7 +193,7 @@ export default function AUHeatMap() {
     setHeatmapInstance(newHeatmap);
   }, [year, mapInstance]);
 
-  // Handle Play/Pause
+  // Play/Pause
   const togglePlay = () => {
     if (isPlaying) {
       if (playInterval.current) clearInterval(playInterval.current);
@@ -195,14 +234,14 @@ export default function AUHeatMap() {
         >
           <ResponsiveContainer width="95%" height="100%">
             <LineChart data={trendData}>
-              {/* <CartesianGrid strokeDasharray="3 3" stroke="#8884d8" /> */}
               <XAxis dataKey="year" stroke="#fff" />
-              {/* <YAxis stroke="#fff" /> */}
               <Tooltip />
-              {/* <Legend verticalAlign="top" /> */}
-              <Line type="monotone" dataKey="avgWeight" stroke="#E8F0C6" strokeWidth={2} />
-              <Line type="monotone" dataKey="maxWeight" stroke="#FF6B6B" strokeWidth={2} />
-              <Line type="monotone" dataKey="minWeight" stroke="#4ECDC4" strokeWidth={2} />
+              <Line
+                type="monotone"
+                dataKey="avgWeight"
+                stroke="#E8F0C6"
+                strokeWidth={2}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
